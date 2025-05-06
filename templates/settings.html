@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Media Placements Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i data-feather="settings" class="me-2"></i> Account Settings</h4>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="true">Profile</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="google-tab" data-bs-toggle="tab" data-bs-target="#google" type="button" role="tab" aria-controls="google" aria-selected="false">Google Integration</button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="settingsTabsContent">
+                    <!-- Profile Tab -->
+                    <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                        <h5 class="mb-3">Profile Information</h5>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Username</label>
+                                    <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" value="{{ current_user.email }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Account Created</label>
+                                    <input type="text" class="form-control" value="{{ current_user.created_at.strftime('%B %d, %Y') }}" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Last Login</label>
+                                    <input type="text" class="form-control" value="{{ current_user.last_login.strftime('%B %d, %Y at %H:%M') if current_user.last_login else 'Not available' }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Google Integration Tab -->
+                    <div class="tab-pane fade" id="google" role="tabpanel" aria-labelledby="google-tab">
+                        <h5 class="mb-3">Google API Integration</h5>
+                        
+                        <div class="alert alert-info mb-4">
+                            <i data-feather="info" class="me-2"></i>
+                            <div>
+                                <strong>Why we need this:</strong>
+                                <p class="mb-0">
+                                    A Google API Key is required to access your Google Docs and Google Sheets for importing media placements. 
+                                    Your API key is stored securely and is only used for this purpose.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('settings') }}">
+                            {{ google_form.hidden_tag() }}
+                            
+                            <div class="mb-4">
+                                <label for="api_key" class="form-label">Google API Key</label>
+                                {{ google_form.api_key(class="form-control", id="api_key", placeholder="Enter your Google API Key") }}
+                                {% if google_form.api_key.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in google_form.api_key.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <a href="https://console.cloud.google.com/apis/credentials" target="_blank">
+                                        Get a Google API Key from Google Cloud Console
+                                        <i data-feather="external-link" class="ms-1" style="width: 14px; height: 14px;"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h6>Required Google API Scopes:</h6>
+                                <ul>
+                                    <li>Google Docs API</li>
+                                    <li>Google Sheets API</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                {{ google_form.submit(class="btn btn-primary") }}
+                            </div>
+                        </form>
+                        
+                        <hr class="my-4">
+                        
+                        <h5 class="mb-3">OAuth Authentication (Alternative)</h5>
+                        <p>Instead of using an API Key, you can authenticate directly with your Google account:</p>
+                        
+                        <div class="d-grid gap-2 d-md-flex">
+                            <a href="{{ url_for('google.google_auth') }}" class="btn btn-outline-primary">
+                                <i data-feather="user-check" class="me-1"></i> Connect with Google
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Activate tabs if URL hash is present
+        if (window.location.hash) {
+            const tab = document.querySelector(`[data-bs-target="${window.location.hash}"]`);
+            if (tab) {
+                new bootstrap.Tab(tab).show();
+            }
+        }
+    });
+</script>
+{% endblock %}

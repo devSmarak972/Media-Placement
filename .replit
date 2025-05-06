@@ -1,0 +1,32 @@
+modules = ["python-3.11"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Flask App"
+
+[[workflows.workflow]]
+name = "Flask App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pip install flask-sqlalchemy flask-migrate flask-wtf flask-login google-auth-oauthlib google-api-python-client requests beautifulsoup4 && python app.py"
+waitForPort = 5000
+
+[deployment]
+run = ["sh", "-c", "pip install flask-sqlalchemy flask-migrate flask-wtf flask-login google-auth-oauthlib google-api-python-client requests beautifulsoup4 && python app.py"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80

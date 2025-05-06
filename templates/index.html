@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Media Placements Tracker - Home{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mt-5">
+    <div class="col-md-6">
+        <h1>Media Placements Tracker</h1>
+        <p class="lead">A powerful tool for PR and media teams to efficiently manage and track media placements.</p>
+        
+        <div class="mt-4">
+            <h4>Key Features:</h4>
+            <ul class="list-group list-group-flush mt-3">
+                <li class="list-group-item d-flex">
+                    <i data-feather="link" class="me-3 text-primary"></i>
+                    <div>
+                        <strong>Multiple Input Methods</strong>
+                        <p class="mb-0">Input media placement links through direct text, Google Docs, or Google Sheets.</p>
+                    </div>
+                </li>
+                <li class="list-group-item d-flex">
+                    <i data-feather="filter" class="me-3 text-primary"></i>
+                    <div>
+                        <strong>Smart Link Parsing</strong>
+                        <p class="mb-0">Automatically extract and organize relevant information from media links.</p>
+                    </div>
+                </li>
+                <li class="list-group-item d-flex">
+                    <i data-feather="grid" class="me-3 text-primary"></i>
+                    <div>
+                        <strong>Organized Dashboard</strong>
+                        <p class="mb-0">View and manage all your media placements from a central dashboard.</p>
+                    </div>
+                </li>
+                <li class="list-group-item d-flex">
+                    <i data-feather="cloud" class="me-3 text-primary"></i>
+                    <div>
+                        <strong>Google Integration</strong>
+                        <p class="mb-0">Seamlessly integrate with Google services to streamline your workflow.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="mt-4">
+            {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-2">Get Started</a>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-lg">Login</a>
+            {% else %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">Go to Dashboard</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-md-6 d-none d-md-block">
+        <div class="text-center">
+            <svg width="500" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+                <!-- Media Placement Illustration -->
+                <rect x="100" y="50" width="400" height="300" rx="10" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+                
+                <!-- Header Bar -->
+                <rect x="100" y="50" width="400" height="40" rx="10" fill="#6c757d"/>
+                <circle cx="125" cy="70" r="8" fill="#ff6b6b"/>
+                <circle cx="150" cy="70" r="8" fill="#ffd166"/>
+                <circle cx="175" cy="70" r="8" fill="#06d6a0"/>
+                
+                <!-- Content Representation -->
+                <rect x="120" y="110" width="360" height="25" rx="4" fill="#e9ecef"/>
+                <rect x="120" y="145" width="280" height="25" rx="4" fill="#e9ecef"/>
+                <rect x="120" y="180" width="360" height="25" rx="4" fill="#e9ecef"/>
+                <rect x="120" y="215" width="200" height="25" rx="4" fill="#e9ecef"/>
+                <rect x="120" y="250" width="320" height="25" rx="4" fill="#e9ecef"/>
+                <rect x="120" y="285" width="250" height="25" rx="4" fill="#e9ecef"/>
+                
+                <!-- Floating Elements -->
+                <rect x="50" y="150" width="80" height="80" rx="10" fill="#4dabf7" opacity="0.7"/>
+                <rect x="470" y="100" width="80" height="80" rx="10" fill="#ffa8a8" opacity="0.7"/>
+                <rect x="470" y="220" width="60" height="60" rx="10" fill="#69db7c" opacity="0.7"/>
+                <rect x="70" y="270" width="60" height="60" rx="10" fill="#ffec99" opacity="0.7"/>
+            </svg>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i data-feather="upload" class="text-primary" style="width: 48px; height: 48px;"></i>
+                </div>
+                <h5 class="card-title">Easy Data Input</h5>
+                <p class="card-text">Input your media placements through multiple methods, including direct text input, Google Docs, and Google Sheets.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i data-feather="zap" class="text-primary" style="width: 48px; height: 48px;"></i>
+                </div>
+                <h5 class="card-title">Automatic Processing</h5>
+                <p class="card-text">Our system uses regular expressions to automatically parse your links and extract relevant information.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i data-feather="bar-chart-2" class="text-primary" style="width: 48px; height: 48px;"></i>
+                </div>
+                <h5 class="card-title">Organized Tracking</h5>
+                <p class="card-text">Keep all your media placements organized in one place for easy access and management.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

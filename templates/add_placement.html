@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Add Media Placement - Media Placements Tracker{% endblock %}
+
+{% block head_extra %}
+<style>
+    .input-method {
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .input-method:hover {
+        border-color: #adb5bd;
+        background-color: #f8f9fa;
+    }
+    
+    .input-method.active {
+        border-color: #0d6efd;
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+    
+    .input-method i {
+        color: #6c757d;
+        transition: color 0.2s;
+    }
+    
+    .input-method.active i {
+        color: #0d6efd;
+    }
+    
+    .input-content {
+        display: none;
+    }
+    
+    .input-content.active {
+        display: block;
+        animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i data-feather="plus-circle" class="me-2"></i> Add Media Placement</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_placement') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <h5 class="mb-3">Select Input Method</h5>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="input-method active" data-method="direct">
+                                <div class="text-center mb-3">
+                                    <i data-feather="type" style="width: 2rem; height: 2rem;"></i>
+                                </div>
+                                <h5 class="mb-1 text-center">Direct Text Input</h5>
+                                <p class="text-muted text-center mb-0 small">Paste text containing URLs or enter URLs directly</p>
+                                
+                                {{ form.input_type(value="direct", type="radio", class="d-none", id="direct_input", checked="checked") }}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="input-method" data-method="gdoc">
+                                <div class="text-center mb-3">
+                                    <i data-feather="file-text" style="width: 2rem; height: 2rem;"></i>
+                                </div>
+                                <h5 class="mb-1 text-center">Google Docs</h5>
+                                <p class="text-muted text-center mb-0 small">Import from Google Docs document</p>
+                                
+                                {{ form.input_type(value="gdoc", type="radio", class="d-none", id="gdoc_input") }}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="input-method" data-method="gsheet">
+                                <div class="text-center mb-3">
+                                    <i data-feather="grid" style="width: 2rem; height: 2rem;"></i>
+                                </div>
+                                <h5 class="mb-1 text-center">Google Sheets</h5>
+                                <p class="text-muted text-center mb-0 small">Import from Google Sheets spreadsheet</p>
+                                
+                                {{ form.input_type(value="gsheet", type="radio", class="d-none", id="gsheet_input") }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <!-- Direct Text Input -->
+                    <div class="input-content active" id="direct-content">
+                        <div class="mb-3">
+                            <label for="text_input" class="form-label">Paste URLs or text containing URLs</label>
+                            {{ form.text_input(class="form-control", id="text_input", rows="8", placeholder="Enter or paste text containing URLs...") }}
+                            {% if form.text_input.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.text_input.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                We'll automatically extract and parse all valid URLs from the text
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Google Docs Input -->
+                    <div class="input-content" id="gdoc-content">
+                        <div class="mb-3">
+                            <label for="google_doc_id" class="form-label">Google Doc ID or URL</label>
+                            {{ form.google_doc_id(class="form-control", id="google_doc_id", placeholder="Paste Google Doc ID or URL...") }}
+                            {% if form.google_doc_id.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.google_doc_id.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Enter the document ID or full URL of the Google Doc containing the media placements
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i data-feather="info" class="me-2"></i>
+                            <span>Make sure you have set up your Google API Key in the <a href="{{ url_for('settings') }}">Settings</a> page.</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Google Sheets Input -->
+                    <div class="input-content" id="gsheet-content">
+                        <div class="mb-3">
+                            <label for="google_sheet_id" class="form-label">Google Sheet ID or URL</label>
+                            {{ form.google_sheet_id(class="form-control", id="google_sheet_id", placeholder="Paste Google Sheet ID or URL...") }}
+                            {% if form.google_sheet_id.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.google_sheet_id.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Enter the spreadsheet ID or full URL of the Google Sheet containing the media placements
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i data-feather="info" class="me-2"></i>
+                            <span>Make sure you have set up your Google API Key in the <a href="{{ url_for('settings') }}">Settings</a> page.</span>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputMethods = document.querySelectorAll('.input-method');
+        const inputContents = document.querySelectorAll('.input-content');
+        
+        // Input method selection
+        inputMethods.forEach(method => {
+            method.addEventListener('click', function() {
+                // Update active method
+                inputMethods.forEach(m => m.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update radio button selection
+                const methodType = this.getAttribute('data-method');
+                document.getElementById(`${methodType}_input`).checked = true;
+                
+                // Show corresponding content
+                inputContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(`${methodType}-content`).classList.add('active');
+            });
+        });
+    });
+</script>
+{% endblock %}

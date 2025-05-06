@@ -1,0 +1,266 @@
+/* Main stylesheet for Media Placements Tracker */
+
+/* Global styles */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8f9fa;
+}
+
+main {
+    flex: 1;
+}
+
+.footer {
+    margin-top: auto;
+}
+
+/* Buttons and interactive elements */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feather {
+    width: 18px;
+    height: 18px;
+    vertical-align: text-bottom;
+}
+
+/* Card styles */
+.card {
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    border-top-left-radius: 0.5rem !important;
+    border-top-right-radius: 0.5rem !important;
+}
+
+.card-footer {
+    border-bottom-left-radius: 0.5rem !important;
+    border-bottom-right-radius: 0.5rem !important;
+}
+
+/* Navbar customization */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.navbar .feather {
+    margin-right: 0.25rem;
+}
+
+/* Form styles */
+.form-label {
+    font-weight: 500;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+.form-text {
+    font-size: 0.85rem;
+}
+
+/* Media placement type badges */
+.media-type-badge {
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.35em 0.65em;
+}
+
+/* Empty state styling */
+.empty-state {
+    padding: 3rem;
+    text-align: center;
+    background-color: #fff;
+    border-radius: 0.5rem;
+}
+
+.empty-state i {
+    width: 64px;
+    height: 64px;
+    color: #dee2e6;
+    margin-bottom: 1rem;
+}
+
+/* Dashboard stats cards */
+.stats-card {
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-card-icon {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    opacity: 0.15;
+    font-size: 3rem;
+}
+
+.stats-number {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* Chart containers */
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 768px) {
+    .navbar .feather {
+        margin-right: 0;
+    }
+    
+    .navbar-brand .feather {
+        margin-right: 0.25rem;
+    }
+    
+    .stats-number {
+        font-size: 1.5rem;
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+}
+
+/* Input method selection in add placement form */
+.input-method {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.input-method:hover {
+    border-color: #adb5bd;
+    background-color: #f8f9fa;
+}
+
+.input-method.active {
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.input-method i {
+    color: #6c757d;
+    transition: color 0.2s;
+}
+
+.input-method.active i {
+    color: #0d6efd;
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s;
+}
+
+/* Table styles */
+.table-placements th {
+    font-weight: 600;
+    color: #495057;
+}
+
+.table-placements td {
+    vertical-align: middle;
+}
+
+/* Make URLs truncate properly */
+.text-truncate-url {
+    max-width: 250px;
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+/* Custom shadows */
+.shadow-sm-hover:hover {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Settings page tab styling */
+.nav-tabs .nav-link {
+    color: #495057;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    font-weight: 600;
+}
+
+/* Google authentication button */
+.btn-google {
+    color: #fff;
+    background-color: #4285F4;
+    border-color: #4285F4;
+}
+
+.btn-google:hover {
+    color: #fff;
+    background-color: #3367D6;
+    border-color: #3367D6;
+}
+
+/* Improve focus visibility for accessibility */
+a:focus, button:focus, input:focus, .btn:focus {
+    outline: 2px solid rgba(13, 110, 253, 0.5);
+    outline-offset: 2px;
+}
+
+/* Custom login/register page styling */
+.auth-container {
+    max-width: 400px;
+    margin: 2rem auto;
+}
+
+.auth-logo {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.auth-logo .feather {
+    width: 64px;
+    height: 64px;
+    color: #0d6efd;
+}
+
+/* Error page styling */
+.error-container {
+    text-align: center;
+    padding: 3rem 0;
+}
+
+.error-container svg {
+    max-width: 200px;
+    margin-bottom: 2rem;
+}
