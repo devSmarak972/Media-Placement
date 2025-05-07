@@ -5,21 +5,9 @@ class Config:
     # Flask configuration
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
     
-    # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql://{}:{}@{}:{}/{}'.format(
-        os.environ.get('PGUSER', 'postgres'),
-        os.environ.get('PGPASSWORD', 'postgres'),
-        os.environ.get('PGHOST', 'localhost'),
-        os.environ.get('PGPORT', '5432'),
-        os.environ.get('PGDATABASE', 'mediaplacements')
-    ))
+    # Database configuration - using SQLite by default for persistence and portability
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///media_placements.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,
-        'pool_recycle': 300,  # recycle connections after 5 minutes
-        'pool_timeout': 30,   # timeout waiting for a connection from pool
-        'pool_size': 10       # maximum number of connections to keep
-    }
     
     # Session configuration
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)

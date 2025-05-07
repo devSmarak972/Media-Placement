@@ -14,15 +14,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Flask App"
+args = "Media Placements App"
 
 [[workflows.workflow]]
-name = "Flask App"
+name = "Media Placements App"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pip install flask-sqlalchemy flask-migrate flask-wtf flask-login google-auth-oauthlib google-api-python-client requests beautifulsoup4 && python app.py"
+args = "python run.py"
 waitForPort = 5000
 
 [deployment]
