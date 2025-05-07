@@ -80,7 +80,7 @@ def add_placement():
                     flash('Google API credentials are not set up. Please add them in Settings.', 'warning')
                     return redirect(url_for('settings'))
                     
-                content = get_google_docs_content(None, doc_id)
+                content = get_google_docs_content(doc_id)
                 links = extract_links(content)
                 
                 if not links:
@@ -122,7 +122,7 @@ def add_placement():
                     flash('Google API credentials are not set up. Please add them in Settings.', 'warning')
                     return redirect(url_for('settings'))
                     
-                content = get_google_sheets_content(None, sheet_id)
+                content = get_google_sheets_content(sheet_id)
                 links = extract_links(content)
                 
                 if not links:

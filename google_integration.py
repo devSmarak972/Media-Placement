@@ -2,7 +2,6 @@ import os
 import json
 from datetime import datetime, timedelta
 from flask import Blueprint, redirect, url_for, request, flash, session, current_app
-from flask_login import login_required, current_user
 import requests
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
@@ -13,18 +12,18 @@ from models import db, GoogleCredential
 
 google_bp = Blueprint('google', __name__, url_prefix='/google')
 
-def get_google_credentials(user_id):
-    """Get Google credentials for a user."""
-    google_cred = GoogleCredential.query.filter_by(user_id=user_id).first()
+def get_google_credentials():
+    """Get Google credentials."""
+    google_cred = GoogleCredential.query.first()
     
     if not google_cred or (not google_cred.api_key and not google_cred.oauth_token):
         raise ValueError("No Google credentials found. Please add your API key in settings.")
     
     return google_cred
 
-def get_google_service(user_id, service_name, version='v1'):
+def get_google_service(service_name, version='v1'):
     """Create and return a Google API service instance."""
-    google_cred = get_google_credentials(user_id)
+    google_cred = get_google_credentials()
     
     # If using API key
     if google_cred.api_key:
@@ -88,10 +87,10 @@ def refresh_google_token(google_cred):
         # Token refresh failed
         raise ValueError(f"Failed to refresh Google token: {response.text}")
 
-def get_google_docs_content(user_id, doc_id):
+def get_google_docs_content(doc_id):
     """Retrieve content from a Google Doc."""
     try:
-        docs_service = get_google_service(user_id, 'docs', 'v1')
+        docs_service = get_google_service('docs', 'v1')
         document = docs_service.documents().get(documentId=doc_id).execute()
         
         content = ""
@@ -109,10 +108,10 @@ def get_google_docs_content(user_id, doc_id):
         current_app.logger.error(f"Unexpected error with Google Docs: {e}")
         raise ValueError(f"Error accessing Google Doc: {str(e)}")
 
-def get_google_sheets_content(user_id, sheet_id):
+def get_google_sheets_content(sheet_id):
     """Retrieve content from a Google Sheet."""
     try:
-        sheets_service = get_google_service(user_id, 'sheets', 'v4')
+        sheets_service = get_google_service('sheets', 'v4')
         sheet = sheets_service.spreadsheets().get(spreadsheetId=sheet_id, includeGridData=True).execute()
         
         content = ""
@@ -134,7 +133,6 @@ def get_google_sheets_content(user_id, sheet_id):
         raise ValueError(f"Error accessing Google Sheet: {str(e)}")
 
 @google_bp.route('/auth')
-@login_required
 def google_auth():
     # Create flow instance to manage OAuth flow
     flow = Flow.from_client_config(
@@ -167,7 +165,6 @@ def google_auth():
     return redirect(authorization_url)
 
 @google_bp.route('/auth/callback')
-@login_required
 def google_auth_callback():
     # Verify state matches to prevent CSRF attacks
     state = session.get('google_auth_state')
@@ -198,7 +195,7 @@ def google_auth_callback():
     credentials = flow.credentials
     
     # Store credentials in database
-    google_cred = GoogleCredential.query.filter_by(user_id=current_user.id).first()
+    google_cred = GoogleCredential.query.first()
     
     token_data = {
         'access_token': credentials.token,
@@ -214,7 +211,6 @@ def google_auth_callback():
         google_cred.token_expiry = token_expiry
     else:
         google_cred = GoogleCredential(
-            user_id=current_user.id,
             oauth_token=json.dumps(token_data),
             refresh_token=credentials.refresh_token,
             token_expiry=token_expiry
