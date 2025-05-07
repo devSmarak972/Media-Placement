@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Export Success{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4><i class="fas fa-check-circle me-2"></i>Export Successful</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success">
+                        <p class="mb-0">Successfully exported all media placements to Google Sheets!</p>
+                    </div>
+                    
+                    <h5 class="mt-4">Exported Spreadsheet</h5>
+                    <p>
+                        Your media placements have been exported to a Google Sheet. You can access it using the link below.
+                    </p>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                        <a href="{{ sheet_url }}" target="_blank" class="btn btn-primary">
+                            <i class="fas fa-external-link-alt me-2"></i>Open Google Sheet
+                        </a>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Return to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

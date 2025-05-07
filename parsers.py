@@ -10,18 +10,13 @@ logger = logging.getLogger(__name__)
 
 def extract_links(text):
     """Extract all URLs from text content."""
-    # URL regex pattern
-    url_pattern = r'https?://[^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s]|/|\.|\|))'
-    
-    # Find all matches
-    links = re.findall(url_pattern, text)
+    # More comprehensive URL regex pattern that properly handles file extensions like .cms
+    url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+(?:/(?:[-\w%!$&\'()*+,;=:~]|(?:%[\da-fA-F]{2}))*)*(?:\?(?:[-\w%!$&\'()*+,;=:~]|(?:%[\da-fA-F]{2}))*)?(?:#(?:[-\w%!$&\'()*+,;=:~]|(?:%[\da-fA-F]{2}))*)?'
     
     # Clean and deduplicate links
     unique_links = set()
-    for link in re.finditer(url_pattern, text):
-        url = link.group(0)
-        # Remove trailing punctuation that might be part of the matched URL but not the actual URL
-        url = url.rstrip('.,;:!?\'\"')
+    for match in re.finditer(url_pattern, text):
+        url = match.group(0)
         unique_links.add(url)
     
     return list(unique_links)

@@ -1,16 +1,30 @@
 import os
 import json
+import io
+import base64
 from datetime import datetime, timedelta
-from flask import Blueprint, redirect, url_for, request, flash, session, current_app
+from flask import Blueprint, redirect, url_for, request, flash, session, current_app, render_template
 import requests
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseUpload
+from PIL import Image
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+import logging
 
-from models import db, GoogleCredential
+from models import db, GoogleCredential, MediaPlacement
 
+# Set up logging
+logger = logging.getLogger(__name__)
+
+# Create blueprints
 google_bp = Blueprint('google', __name__, url_prefix='/google')
+docket_bp = Blueprint('docket', __name__, url_prefix='/docket')
 
 def get_google_credentials():
     """Get Google credentials."""
@@ -219,5 +233,439 @@ def google_auth_callback():
     
     db.session.commit()
     
+    # Check if there's a return_to session variable to handle redirects
+    # This is used when coming from the docket creation process
+    return_to = session.pop('return_to', None)
+    if return_to == 'create_dockets':
+        flash('Successfully authenticated with Google! Creating dockets...', 'success')
+        return redirect(url_for('docket.create_all_dockets'))
+    
     flash('Successfully authenticated with Google!', 'success')
     return redirect(url_for('settings'))
+
+def take_screenshot(url):
+    """Take a screenshot of a webpage."""
+    try:
+        # Configure Chrome options
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1280,1024")
+        
+        # Setup Chrome driver
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        
+        # Navigate to URL and wait for page to load
+        driver.get(url)
+        driver.implicitly_wait(5)
+        
+        # Take screenshot
+        screenshot = driver.get_screenshot_as_png()
+        
+        # Close driver
+        driver.quit()
+        
+        return screenshot
+    except Exception as e:
+        logger.error(f"Error taking screenshot for {url}: {str(e)}")
+        return None
+
+def extract_summary(url):
+    """Extract a summary from the webpage."""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Try to get the main article content
+        article = soup.find('article') or soup.find(class_=['article', 'post', 'content', 'main-content'])
+        
+        if article:
+            paragraphs = article.find_all('p')
+            content = ' '.join([p.get_text().strip() for p in paragraphs[:5]])  # Get first 5 paragraphs
+        else:
+            # Fallback to all paragraphs
+            paragraphs = soup.find_all('p')
+            content = ' '.join([p.get_text().strip() for p in paragraphs[:5]])
+        
+        # Limit summary length
+        if content:
+            content = content[:1000] + '...' if len(content) > 1000 else content
+        else:
+            content = "No text content could be extracted from this page."
+        
+        return content
+    except Exception as e:
+        logger.error(f"Error extracting summary for {url}: {str(e)}")
+        return f"Error extracting summary: {str(e)}"
+
+def create_google_doc(title, content, screenshot=None):
+    """Create a Google Doc with the given content and screenshot."""
+    try:
+        docs_service = get_google_service('docs', 'v1')
+        drive_service = get_google_service('drive', 'v3')
+        
+        # Create a new document
+        doc = {
+            'title': title
+        }
+        doc = docs_service.documents().create(body=doc).execute()
+        doc_id = doc.get('documentId')
+        
+        # Prepare the content
+        requests = [{
+            'insertText': {
+                'location': {
+                    'index': 1
+                },
+                'text': content
+            }
+        }]
+        
+        # Update the document with content
+        docs_service.documents().batchUpdate(
+            documentId=doc_id,
+            body={'requests': requests}
+        ).execute()
+        
+        # If there's a screenshot, insert it
+        if screenshot:
+            # Upload screenshot to drive first
+            file_metadata = {
+                'name': f'{title} Screenshot',
+                'mimeType': 'image/png'
+            }
+            
+            # Convert screenshot to Media object
+            screenshot_bytes = io.BytesIO(screenshot)
+            media = MediaIoBaseUpload(screenshot_bytes, mimetype='image/png', resumable=True)
+            
+            # Upload file
+            file = drive_service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+            
+            # Get the fileId and create an image in the document
+            file_id = file.get('id')
+            
+            # Now insert the image into the document
+            requests = [{
+                'insertInlineImage': {
+                    'location': {
+                        'index': 1  # Insert at the beginning
+                    },
+                    'uri': f'https://drive.google.com/uc?id={file_id}',
+                    'objectSize': {
+                        'height': {
+                            'magnitude': 400,
+                            'unit': 'PT'
+                        },
+                        'width': {
+                            'magnitude': 600,
+                            'unit': 'PT'
+                        }
+                    }
+                }
+            }]
+            
+            docs_service.documents().batchUpdate(
+                documentId=doc_id,
+                body={'requests': requests}
+            ).execute()
+        
+        # Return the document URL
+        return f"https://docs.google.com/document/d/{doc_id}/edit"
+    
+    except Exception as e:
+        logger.error(f"Error creating Google Doc: {str(e)}")
+        raise ValueError(f"Error creating Google Doc: {str(e)}")
+
+def create_google_sheet(title, data):
+    """Create a Google Sheet with the given data."""
+    try:
+        sheets_service = get_google_service('sheets', 'v4')
+        drive_service = get_google_service('drive', 'v3')
+        
+        # Create a new spreadsheet
+        spreadsheet = {
+            'properties': {
+                'title': title
+            }
+        }
+        spreadsheet = sheets_service.spreadsheets().create(body=spreadsheet).execute()
+        spreadsheet_id = spreadsheet.get('spreadsheetId')
+        
+        # Prepare the data for the sheet
+        values = [
+            ["Title", "URL", "Source", "Publication Date", "Media Type", "Docket Link"]
+        ]
+        values.extend(data)
+        
+        # Update spreadsheet with data
+        body = {
+            'values': values
+        }
+        
+        sheets_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range='Sheet1!A1',
+            valueInputOption='RAW',
+            body=body
+        ).execute()
+        
+        # Format header row
+        requests = [{
+            'updateCells': {
+                'rows': {
+                    'values': [{
+                        'userEnteredFormat': {
+                            'backgroundColor': {
+                                'red': 0.7,
+                                'green': 0.7,
+                                'blue': 0.7
+                            },
+                            'textFormat': {
+                                'bold': True
+                            }
+                        }
+                    }]
+                },
+                'fields': 'userEnteredFormat(backgroundColor,textFormat)',
+                'range': {
+                    'sheetId': 0,
+                    'startRowIndex': 0,
+                    'endRowIndex': 1
+                }
+            }
+        }]
+        
+        sheets_service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={'requests': requests}
+        ).execute()
+        
+        # Return the spreadsheet URL
+        return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+    
+    except Exception as e:
+        logger.error(f"Error creating Google Sheet: {str(e)}")
+        raise ValueError(f"Error creating Google Sheet: {str(e)}")
+
+@docket_bp.route('/create/<int:placement_id>')
+def create_docket(placement_id):
+    """Create a docket for a specific media placement."""
+    try:
+        # Check if Google credentials are available
+        try:
+            google_cred = get_google_credentials()
+            if not google_cred.oauth_token:
+                # Store where to return after OAuth
+                session['return_to'] = 'create_dockets'
+                flash('Please authenticate with Google before creating dockets.', 'warning')
+                return redirect(url_for('google.google_auth'))
+        except ValueError:
+            # Store where to return after OAuth
+            session['return_to'] = 'create_dockets'
+            flash('Please authenticate with Google before creating dockets.', 'warning')
+            return redirect(url_for('google.google_auth'))
+        
+        # Get the placement
+        placement = MediaPlacement.query.filter_by(id=placement_id).first_or_404()
+        
+        # Take a screenshot
+        screenshot = take_screenshot(placement.url)
+        
+        # Extract a summary
+        summary = extract_summary(placement.url)
+        
+        # Create the document content
+        content = f"""
+# {placement.title or "Untitled Article"}
+
+URL: {placement.url}
+Source: {placement.source}
+Publication Date: {placement.publication_date if placement.publication_date else "Unknown"}
+Media Type: {placement.media_type}
+Created: {placement.created_at.strftime('%Y-%m-%d %H:%M:%S')}
+
+## Summary
+{summary}
+
+## Notes
+{placement.notes or ""}
+"""
+        
+        # Create a Google Doc
+        doc_url = create_google_doc(
+            f"Media Placement - {placement.title or placement.source}",
+            content,
+            screenshot
+        )
+        
+        # Update the placement with the doc URL
+        placement.docket_url = doc_url
+        db.session.commit()
+        
+        flash(f'Successfully created docket for "{placement.title or placement.url}"!', 'success')
+        return redirect(url_for('view_placement', placement_id=placement_id))
+        
+    except Exception as e:
+        logger.error(f"Error creating docket: {str(e)}")
+        flash(f'Error creating docket: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
+
+@docket_bp.route('/create_all')
+def create_all_dockets():
+    """Create dockets for all media placements."""
+    try:
+        # Check if Google credentials are available
+        try:
+            google_cred = get_google_credentials()
+            if not google_cred.oauth_token:
+                # Store where to return after OAuth
+                session['return_to'] = 'create_dockets'
+                flash('Please authenticate with Google before creating dockets.', 'warning')
+                return redirect(url_for('google.google_auth'))
+        except ValueError:
+            # Store where to return after OAuth
+            session['return_to'] = 'create_dockets'
+            flash('Please authenticate with Google before creating dockets.', 'warning')
+            return redirect(url_for('google.google_auth'))
+        
+        # Get all placements that don't have dockets yet
+        placements = MediaPlacement.query.filter(MediaPlacement.docket_url == None).all()
+        
+        if not placements:
+            flash('No media placements found that need dockets.', 'info')
+            return redirect(url_for('dashboard'))
+        
+        docket_data = []
+        success_count = 0
+        
+        for placement in placements:
+            try:
+                # Take a screenshot
+                screenshot = take_screenshot(placement.url)
+                
+                # Extract a summary
+                summary = extract_summary(placement.url)
+                
+                # Create the document content
+                content = f"""
+# {placement.title or "Untitled Article"}
+
+URL: {placement.url}
+Source: {placement.source}
+Publication Date: {placement.publication_date if placement.publication_date else "Unknown"}
+Media Type: {placement.media_type}
+Created: {placement.created_at.strftime('%Y-%m-%d %H:%M:%S')}
+
+## Summary
+{summary}
+
+## Notes
+{placement.notes or ""}
+"""
+                
+                # Create a Google Doc
+                doc_url = create_google_doc(
+                    f"Media Placement - {placement.title or placement.source}",
+                    content,
+                    screenshot
+                )
+                
+                # Update the placement with the doc URL
+                placement.docket_url = doc_url
+                db.session.commit()
+                
+                # Add to spreadsheet data
+                docket_data.append([
+                    placement.title or "Untitled",
+                    placement.url,
+                    placement.source,
+                    str(placement.publication_date) if placement.publication_date else "Unknown",
+                    placement.media_type,
+                    doc_url
+                ])
+                
+                success_count += 1
+                
+            except Exception as e:
+                logger.error(f"Error creating docket for placement {placement.id}: {str(e)}")
+                continue
+        
+        # Create a Google Sheet with all dockets
+        if docket_data:
+            sheet_url = create_google_sheet("Media Placements Summary", docket_data)
+            
+            flash(f'Successfully created {success_count} dockets and a summary spreadsheet!', 'success')
+            
+            # Return with sheet URL for download
+            return render_template('docket_success.html', 
+                                   docket_count=success_count, 
+                                   sheet_url=sheet_url)
+        else:
+            flash('No dockets were created due to errors. Please check the logs.', 'warning')
+            return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        logger.error(f"Error creating dockets: {str(e)}")
+        flash(f'Error creating dockets: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
+
+@docket_bp.route('/export_to_sheet')
+def export_to_sheet():
+    """Export all media placements to a Google Sheet."""
+    try:
+        # Check if Google credentials are available
+        try:
+            google_cred = get_google_credentials()
+            if not google_cred.oauth_token:
+                # Store where to return after OAuth
+                session['return_to'] = 'create_dockets'
+                flash('Please authenticate with Google before exporting to sheet.', 'warning')
+                return redirect(url_for('google.google_auth'))
+        except ValueError:
+            # Store where to return after OAuth
+            session['return_to'] = 'create_dockets'
+            flash('Please authenticate with Google before exporting to sheet.', 'warning')
+            return redirect(url_for('google.google_auth'))
+        
+        # Get all placements
+        placements = MediaPlacement.query.all()
+        
+        if not placements:
+            flash('No media placements found to export.', 'info')
+            return redirect(url_for('dashboard'))
+        
+        # Prepare data for sheet
+        sheet_data = []
+        for placement in placements:
+            sheet_data.append([
+                placement.title or "Untitled",
+                placement.url,
+                placement.source,
+                str(placement.publication_date) if placement.publication_date else "Unknown",
+                placement.media_type,
+                placement.docket_url or "No docket"
+            ])
+        
+        # Create the sheet
+        sheet_url = create_google_sheet("Media Placements Export", sheet_data)
+        
+        flash(f'Successfully exported {len(placements)} media placements to Google Sheets!', 'success')
+        return render_template('export_success.html', sheet_url=sheet_url)
+        
+    except Exception as e:
+        logger.error(f"Error exporting to sheet: {str(e)}")
+        flash(f'Error exporting to sheet: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))

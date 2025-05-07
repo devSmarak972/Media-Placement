@@ -14,6 +14,7 @@ class MediaPlacement(db.Model):
     media_type = db.Column(db.String(64), default='article')  # article, video, podcast, etc.
     notes = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, nullable=True)  # Allow NULL for user_id now that we don't use authentication
+    docket_url = db.Column(db.String(512), nullable=True)  # URL to the Google Doc docket
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -28,6 +29,7 @@ class GoogleCredential(db.Model):
     oauth_token = db.Column(db.Text, nullable=True)
     refresh_token = db.Column(db.String(256), nullable=True)
     token_expiry = db.Column(db.DateTime, nullable=True)
+    user_id = db.Column(db.Integer, nullable=True)  # Make user_id nullable
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

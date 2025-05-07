@@ -9,7 +9,7 @@ from config import Config
 from models import db, MediaPlacement, GoogleCredential
 from forms import AddPlacementForm, GoogleCredentialForm
 from utils import setup_logging
-from google_integration import google_bp, get_google_docs_content, get_google_sheets_content
+from google_integration import google_bp, docket_bp, get_google_docs_content, get_google_sheets_content
 from parsers import extract_links, parse_media_links
 
 # Initialize Flask app
@@ -26,6 +26,7 @@ csrf = CSRFProtect(app)
 
 # Register blueprints
 app.register_blueprint(google_bp)
+app.register_blueprint(docket_bp)
 
 @app.route('/')
 def index():
