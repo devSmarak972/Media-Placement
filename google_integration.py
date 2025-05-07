@@ -15,6 +15,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
+from bs4 import BeautifulSoup
 import logging
 
 from models import db, GoogleCredential, MediaPlacement
@@ -505,8 +506,9 @@ Created: {placement.created_at.strftime('%Y-%m-%d %H:%M:%S')}
 """
         
         # Create a Google Doc
+        doc_title = f"Media Placement - {placement.title or placement.source or 'Untitled'}"
         doc_url = create_google_doc(
-            f"Media Placement - {placement.title or placement.source}",
+            doc_title,
             content,
             screenshot
         )
@@ -515,8 +517,10 @@ Created: {placement.created_at.strftime('%Y-%m-%d %H:%M:%S')}
         placement.docket_url = doc_url
         db.session.commit()
         
-        flash(f'Successfully created docket for "{placement.title or placement.url}"!', 'success')
-        return redirect(url_for('view_placement', placement_id=placement_id))
+        # Return the success template
+        return render_template('docket_success.html', 
+                               docket_url=doc_url, 
+                               docket_title=doc_title)
         
     except Exception as e:
         logger.error(f"Error creating docket: {str(e)}")
