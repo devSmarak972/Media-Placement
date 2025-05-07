@@ -64,9 +64,15 @@ def add_placement():
                     added_count += 1
             
             if added_count > 0:
-                db.session.commit()
-                flash(f'Successfully added {added_count} media placements!', 'success')
-                return redirect(url_for('dashboard'))
+                try:
+                    db.session.commit()
+                    flash(f'Successfully added {added_count} media placements!', 'success')
+                    return redirect(url_for('dashboard'))
+                except Exception as e:
+                    db.session.rollback()
+                    app.logger.error(f"Database error when adding placements: {str(e)}")
+                    flash(f'Error saving to database: {str(e)}', 'danger')
+                    return render_template('add_placement.html', form=form)
             else:
                 flash('Could not extract media information from the provided links.', 'warning')
         
@@ -103,9 +109,15 @@ def add_placement():
                         added_count += 1
                 
                 if added_count > 0:
-                    db.session.commit()
-                    flash(f'Successfully added {added_count} media placements from Google Doc!', 'success')
-                    return redirect(url_for('dashboard'))
+                    try:
+                        db.session.commit()
+                        flash(f'Successfully added {added_count} media placements from Google Doc!', 'success')
+                        return redirect(url_for('dashboard'))
+                    except Exception as e:
+                        db.session.rollback()
+                        app.logger.error(f"Database error when adding placements from Google Doc: {str(e)}")
+                        flash(f'Error saving to database: {str(e)}', 'danger')
+                        return render_template('add_placement.html', form=form)
                 else:
                     flash('Could not extract media information from the links in the Google Doc.', 'warning')
             except Exception as e:
@@ -145,9 +157,15 @@ def add_placement():
                         added_count += 1
                 
                 if added_count > 0:
-                    db.session.commit()
-                    flash(f'Successfully added {added_count} media placements from Google Sheet!', 'success')
-                    return redirect(url_for('dashboard'))
+                    try:
+                        db.session.commit()
+                        flash(f'Successfully added {added_count} media placements from Google Sheet!', 'success')
+                        return redirect(url_for('dashboard'))
+                    except Exception as e:
+                        db.session.rollback()
+                        app.logger.error(f"Database error when adding placements from Google Sheet: {str(e)}")
+                        flash(f'Error saving to database: {str(e)}', 'danger')
+                        return render_template('add_placement.html', form=form)
                 else:
                     flash('Could not extract media information from the links in the Google Sheet.', 'warning')
             except Exception as e:
@@ -164,9 +182,14 @@ def view_placement(placement_id):
 @app.route('/placement/<int:placement_id>/delete', methods=['POST'])
 def delete_placement(placement_id):
     placement = MediaPlacement.query.filter_by(id=placement_id).first_or_404()
-    db.session.delete(placement)
-    db.session.commit()
-    flash('Media placement deleted successfully.', 'success')
+    try:
+        db.session.delete(placement)
+        db.session.commit()
+        flash('Media placement deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Database error when deleting placement: {str(e)}")
+        flash(f'Error deleting placement: {str(e)}', 'danger')
     return redirect(url_for('dashboard'))
 
 @app.route('/settings', methods=['GET', 'POST'])
@@ -177,18 +200,23 @@ def settings():
     google_cred = GoogleCredential.query.first()
     
     if google_form.validate_on_submit():
-        if google_cred:
-            google_cred.api_key = google_form.api_key.data
-            flash('Google API Key updated successfully!', 'success')
-        else:
-            google_cred = GoogleCredential(
-                api_key=google_form.api_key.data
-            )
-            db.session.add(google_cred)
-            flash('Google API Key added successfully!', 'success')
-        
-        db.session.commit()
-        return redirect(url_for('settings'))
+        try:
+            if google_cred:
+                google_cred.api_key = google_form.api_key.data
+                flash('Google API Key updated successfully!', 'success')
+            else:
+                google_cred = GoogleCredential(
+                    api_key=google_form.api_key.data
+                )
+                db.session.add(google_cred)
+                flash('Google API Key added successfully!', 'success')
+            
+            db.session.commit()
+            return redirect(url_for('settings'))
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Database error when saving Google credentials: {str(e)}")
+            flash(f'Error saving credentials: {str(e)}', 'danger')
     
     # Pre-populate form if credentials exist
     if google_cred and request.method == 'GET':

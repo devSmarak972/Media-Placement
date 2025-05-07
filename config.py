@@ -14,6 +14,12 @@ class Config:
         os.environ.get('PGDATABASE', 'mediaplacements')
     ))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,  # recycle connections after 5 minutes
+        'pool_timeout': 30,   # timeout waiting for a connection from pool
+        'pool_size': 10       # maximum number of connections to keep
+    }
     
     # Session configuration
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
