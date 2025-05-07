@@ -97,12 +97,26 @@
                             
                             {% if placement.docket_url %}
                             <a href="{{ placement.docket_url }}" target="_blank" class="btn btn-success">
-                                <i data-feather="file-text" class="me-1"></i> View Docket
+                                <i data-feather="file-text" class="me-1"></i> View Google Docket
                             </a>
                             {% else %}
-                            <a href="{{ url_for('docket.create_docket', placement_id=placement.id) }}" class="btn btn-outline-success">
-                                <i data-feather="file-plus" class="me-1"></i> Create Docket
-                            </a>
+                            <div class="dropdown mb-2">
+                                <button class="btn btn-outline-success dropdown-toggle w-100" type="button" id="docketDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i data-feather="file-plus" class="me-1"></i> Create Docket
+                                </button>
+                                <ul class="dropdown-menu w-100" aria-labelledby="docketDropdown">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for('docket.create_docket', placement_id=placement.id) }}">
+                                            <i data-feather="cloud" class="me-1"></i> Create in Google Docs
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ url_for('create_docx_docket', placement_id=placement.id) }}">
+                                            <i data-feather="download" class="me-1"></i> Download Word Document
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                             {% endif %}
                             
                             <a href="{{ url_for('export_single_excel', placement_id=placement.id) }}" class="btn btn-outline-primary">

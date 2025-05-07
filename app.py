@@ -1,5 +1,6 @@
 import os
 import io
+import requests
 from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
@@ -7,6 +8,10 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 import logging
 import pandas as pd
+from docx import Document
+from docx.shared import Inches
+from PIL import Image
+from bs4 import BeautifulSoup
 
 from config import Config
 from models import db, MediaPlacement, GoogleCredential
@@ -296,6 +301,124 @@ def export_excel():
         app.logger.error(f"Error exporting to Excel: {str(e)}")
         flash(f'Error exporting to Excel: {str(e)}', 'danger')
         return redirect(url_for('dashboard'))
+
+@app.route('/create-docx-docket/<int:placement_id>')
+def create_docx_docket(placement_id):
+    """Create a Word document docket for a specific media placement."""
+    try:
+        # Get the placement
+        placement = MediaPlacement.query.filter_by(id=placement_id).first_or_404()
+        
+        # Create a new Word document
+        doc = Document()
+        
+        # Add title with formatting
+        doc.add_heading(placement.title or "Untitled Article", level=1)
+        
+        # Add basic info section
+        doc.add_heading("Basic Information", level=2)
+        table = doc.add_table(rows=5, cols=2)
+        table.style = 'Table Grid'
+        
+        # Add basic info rows
+        cells = table.rows[0].cells
+        cells[0].text = "URL"
+        cells[1].text = placement.url
+        
+        cells = table.rows[1].cells
+        cells[0].text = "Source"
+        cells[1].text = placement.source or "Unknown"
+        
+        cells = table.rows[2].cells
+        cells[0].text = "Publication Date"
+        cells[1].text = str(placement.publication_date) if placement.publication_date else "Unknown"
+        
+        cells = table.rows[3].cells
+        cells[0].text = "Media Type"
+        cells[1].text = placement.media_type.title()
+        
+        cells = table.rows[4].cells
+        cells[0].text = "Created"
+        cells[1].text = placement.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Add screenshot section
+        doc.add_heading("Screenshot", level=2)
+        
+        # Try to take a screenshot of the URL
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(placement.url, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            # Use selenium-based screenshot logic if implemented or add a placeholder
+            doc.add_paragraph("Screenshot could not be included automatically. Please manually take a screenshot.")
+        except Exception as e:
+            app.logger.error(f"Error taking screenshot for {placement.url}: {str(e)}")
+            doc.add_paragraph(f"Error capturing screenshot: {str(e)}")
+        
+        # Add summary section
+        doc.add_heading("Summary", level=2)
+        
+        # Try to extract a summary
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(placement.url, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Try to get the main article content
+            article = soup.find('article') or soup.find(class_=['article', 'post', 'content', 'main-content'])
+            
+            if article:
+                paragraphs = article.find_all('p')
+                content = ' '.join([p.get_text().strip() for p in paragraphs[:5]])  # Get first 5 paragraphs
+            else:
+                # Fallback to all paragraphs
+                paragraphs = soup.find_all('p')
+                content = ' '.join([p.get_text().strip() for p in paragraphs[:5]])
+            
+            # Limit summary length
+            if content:
+                content = content[:1000] + '...' if len(content) > 1000 else content
+                doc.add_paragraph(content)
+            else:
+                doc.add_paragraph("No text content could be extracted from this page.")
+                
+        except Exception as e:
+            app.logger.error(f"Error extracting summary for {placement.url}: {str(e)}")
+            doc.add_paragraph(f"Error extracting summary: {str(e)}")
+        
+        # Add notes section
+        doc.add_heading("Notes", level=2)
+        doc.add_paragraph(placement.notes or "No notes available")
+        
+        # Save the document to a BytesIO object
+        docx_file = io.BytesIO()
+        doc.save(docx_file)
+        docx_file.seek(0)
+        
+        # Create a sanitized title for filename
+        safe_title = ''.join(c for c in (placement.title or "untitled") if c.isalnum() or c in ' -_')[:30]
+        safe_title = safe_title.replace(' ', '_')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # Return the document as a download
+        return send_file(
+            docx_file,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            as_attachment=True,
+            download_name=f'docket_{safe_title}_{timestamp}.docx'
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error creating DOCX docket: {str(e)}")
+        flash(f'Error creating DOCX docket: {str(e)}', 'danger')
+        return redirect(url_for('view_placement', placement_id=placement_id))
 
 @app.route('/export/excel/<int:placement_id>')
 def export_single_excel(placement_id):
