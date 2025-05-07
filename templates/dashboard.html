@@ -47,6 +47,12 @@
                         <i data-feather="grid" class="me-1"></i> Export to Google Sheet
                     </a>
                 </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('google.google_auth') }}">
+                        <i data-feather="refresh-cw" class="me-1"></i> Authenticate with Google
+                    </a>
+                </li>
             </ul>
         </div>
         {% endif %}

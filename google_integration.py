@@ -204,7 +204,14 @@ def google_auth_callback():
     flow.redirect_uri = current_app.config['GOOGLE_REDIRECT_URI']
     
     # Use authorization code to get token
-    flow.fetch_token(authorization_response=request.url)
+    # In Replit, the URL might be using HTTP while the external URL is HTTPS
+    # Fix the URL protocol to match the redirect URI protocol
+    auth_response = request.url
+    if current_app.config['GOOGLE_REDIRECT_URI'].startswith('https') and auth_response.startswith('http:'):
+        auth_response = auth_response.replace('http:', 'https:', 1)
+        
+    logger.info(f"Using authorization response: {auth_response}")
+    flow.fetch_token(authorization_response=auth_response)
     
     # Get credentials from flow
     credentials = flow.credentials
