@@ -105,6 +105,10 @@
                             </a>
                             {% endif %}
                             
+                            <a href="{{ url_for('export_single_excel', placement_id=placement.id) }}" class="btn btn-outline-primary">
+                                <i data-feather="download" class="me-1"></i> Export as Excel
+                            </a>
+                            
                             <form action="{{ url_for('delete_placement', placement_id=placement.id) }}" method="POST">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-outline-danger w-100" onclick="return confirm('Are you sure you want to delete this placement?')">
