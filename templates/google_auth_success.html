@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Google Authentication Successful - Media Placements Tracker{% endblock %}
+
+{% block content %}
+<div class="text-center my-5">
+    <div class="mb-4">
+        <i data-feather="check-circle" style="width: 64px; height: 64px;" class="text-success"></i>
+    </div>
+    <h2 class="mb-3">Google Authentication Successful!</h2>
+    <p class="lead">Your Google account has been successfully connected.</p>
+    <p class="mb-4">You can now use Google Docs and Google Sheets integration features.</p>
+    
+    <div class="d-flex justify-content-center gap-3">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+            <i data-feather="grid" class="me-1"></i> Go to Dashboard
+        </a>
+        <a href="{{ url_for('add_placement') }}" class="btn btn-outline-primary">
+            <i data-feather="plus" class="me-1"></i> Add Placements
+        </a>
+    </div>
+</div>
+{% endblock %}

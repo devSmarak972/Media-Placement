@@ -20,36 +20,28 @@
                 </ul>
                 
                 <div class="tab-content" id="settingsTabsContent">
-                    <!-- Profile Tab -->
+                    <!-- System Information Tab -->
                     <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
-                        <h5 class="mb-3">Profile Information</h5>
+                        <h5 class="mb-3">System Information</h5>
+                        
+                        <div class="alert alert-info mb-4">
+                            <p class="mb-0">
+                                <i data-feather="info" class="me-2"></i>
+                                This application is running in public mode. No user authentication is required.
+                            </p>
+                        </div>
                         
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Username</label>
-                                    <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
+                                    <label class="form-label">Media Tracker Version</label>
+                                    <input type="text" class="form-control" value="1.0.0" readonly>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Email Address</label>
-                                    <input type="email" class="form-control" value="{{ current_user.email }}" readonly>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Account Created</label>
-                                    <input type="text" class="form-control" value="{{ current_user.created_at.strftime('%B %d, %Y') }}" readonly>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Last Login</label>
-                                    <input type="text" class="form-control" value="{{ current_user.last_login.strftime('%B %d, %Y at %H:%M') if current_user.last_login else 'Not available' }}" readonly>
+                                    <label class="form-label">Server Time</label>
+                                    <input type="text" class="form-control" value="{{ now().strftime('%B %d, %Y at %H:%M') }}" readonly>
                                 </div>
                             </div>
                         </div>

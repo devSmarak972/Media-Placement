@@ -30,9 +30,30 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i data-feather="grid" class="me-2"></i> Your Media Placements</h1>
-    <a href="{{ url_for('add_placement') }}" class="btn btn-primary">
-        <i data-feather="plus" class="me-1"></i> Add Placement
-    </a>
+    <div class="d-flex gap-2">
+        {% if placements %}
+        <div class="dropdown">
+            <button class="btn btn-outline-success dropdown-toggle" type="button" id="googleActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i data-feather="file" class="me-1"></i> Google Actions
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="googleActionsDropdown">
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('docket.create_all_dockets') }}">
+                        <i data-feather="file-text" class="me-1"></i> Create Dockets for All
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('docket.export_to_sheet') }}">
+                        <i data-feather="grid" class="me-1"></i> Export to Google Sheet
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% endif %}
+        <a href="{{ url_for('add_placement') }}" class="btn btn-primary">
+            <i data-feather="plus" class="me-1"></i> Add Placement
+        </a>
+    </div>
 </div>
 
 <div class="row mb-4">
@@ -113,16 +134,23 @@
                 </p>
             </div>
             <div class="card-footer bg-transparent">
-                <div class="d-flex justify-content-between">
-                    <a href="{{ url_for('view_placement', placement_id=placement.id) }}" class="btn btn-sm btn-outline-primary">
-                        <i data-feather="eye" class="me-1"></i> View
-                    </a>
-                    <form action="{{ url_for('delete_placement', placement_id=placement.id) }}" method="POST" class="d-inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this placement?')">
-                            <i data-feather="trash-2" class="me-1"></i> Delete
-                        </button>
-                    </form>
+                <div class="d-flex justify-content-between align-items-center">
+                    {% if placement.docket_url %}
+                    <span class="badge bg-success text-white">
+                        <i data-feather="check-circle" style="width: 12px; height: 12px;"></i> Docket Ready
+                    </span>
+                    {% endif %}
+                    <div class="d-flex gap-1 ms-auto">
+                        <a href="{{ url_for('view_placement', placement_id=placement.id) }}" class="btn btn-sm btn-outline-primary">
+                            <i data-feather="eye" class="me-1"></i> View
+                        </a>
+                        <form action="{{ url_for('delete_placement', placement_id=placement.id) }}" method="POST" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this placement?')">
+                                <i data-feather="trash-2" class="me-1"></i> Delete
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

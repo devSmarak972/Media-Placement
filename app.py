@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -23,6 +24,13 @@ setup_logging(app)
 db.init_app(app)
 migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
+
+# Add utility functions to template context
+@app.context_processor
+def utility_processor():
+    return {
+        'now': datetime.utcnow
+    }
 
 # Register blueprints
 app.register_blueprint(google_bp)
