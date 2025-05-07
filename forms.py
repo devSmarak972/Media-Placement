@@ -1,35 +1,7 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectField, RadioField, BooleanField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, URL, Optional, ValidationError
+from wtforms import StringField, SubmitField, TextAreaField, SelectField, RadioField
+from wtforms.validators import DataRequired, Length, URL, Optional, ValidationError
 import re
-
-class LoginForm(FlaskForm):
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    remember_me = BooleanField('Remember Me')
-    submit = SubmitField('Sign In')
-
-class RegistrationForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=64)])
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired(), Length(min=8)])
-    confirm_password = PasswordField(
-        'Confirm Password', 
-        validators=[DataRequired(), EqualTo('password', message='Passwords must match')]
-    )
-    submit = SubmitField('Register')
-    
-    def validate_username(self, username):
-        from models import User
-        user = User.query.filter_by(username=username.data).first()
-        if user:
-            raise ValidationError('Username already taken. Please choose a different one.')
-    
-    def validate_email(self, email):
-        from models import User
-        user = User.query.filter_by(email=email.data).first()
-        if user:
-            raise ValidationError('Email already registered. Please use a different one or login.')
 
 class AddPlacementForm(FlaskForm):
     input_type = RadioField(

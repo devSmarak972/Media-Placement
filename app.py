@@ -2,15 +2,12 @@ import os
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager, login_required, current_user
 from flask_wtf.csrf import CSRFProtect
-from werkzeug.security import generate_password_hash, check_password_hash
 import logging
 
 from config import Config
-from models import db, User, MediaPlacement, GoogleCredential
-from forms import LoginForm, RegistrationForm, AddPlacementForm, GoogleCredentialForm
-from auth import auth_bp
+from models import db, MediaPlacement, GoogleCredential
+from forms import AddPlacementForm, GoogleCredentialForm
 from utils import setup_logging
 from google_integration import google_bp, get_google_docs_content, get_google_sheets_content
 from parsers import extract_links, parse_media_links
@@ -27,33 +24,19 @@ db.init_app(app)
 migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
 
-# Setup login manager
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'auth.login'
-
 # Register blueprints
-app.register_blueprint(auth_bp)
 app.register_blueprint(google_bp)
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
 
 @app.route('/')
 def index():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    return render_template('index.html')
+    return redirect(url_for('dashboard'))
 
 @app.route('/dashboard')
-@login_required
 def dashboard():
-    placements = MediaPlacement.query.filter_by(user_id=current_user.id).order_by(MediaPlacement.created_at.desc()).all()
+    placements = MediaPlacement.query.order_by(MediaPlacement.created_at.desc()).all()
     return render_template('dashboard.html', placements=placements)
 
 @app.route('/add_placement', methods=['GET', 'POST'])
-@login_required
 def add_placement():
     form = AddPlacementForm()
     if form.validate_on_submit():
@@ -75,8 +58,7 @@ def add_placement():
                         title=placement_data.get('title', ''),
                         source=placement_data.get('source', ''),
                         publication_date=placement_data.get('date'),
-                        media_type=placement_data.get('type', 'article'),
-                        user_id=current_user.id
+                        media_type=placement_data.get('type', 'article')
                     )
                     db.session.add(placement)
                     added_count += 1
@@ -92,14 +74,20 @@ def add_placement():
         elif form.input_type.data == 'gdoc':
             doc_id = form.google_doc_id.data
             try:
-                content = get_google_docs_content(current_user.id, doc_id)
+                # Get the first Google credential (since we no longer have user-specific credentials)
+                google_cred = GoogleCredential.query.first()
+                if not google_cred:
+                    flash('Google API credentials are not set up. Please add them in Settings.', 'warning')
+                    return redirect(url_for('settings'))
+                    
+                content = get_google_docs_content(None, doc_id)
                 links = extract_links(content)
                 
                 if not links:
                     flash('No valid media links found in the Google Doc.', 'warning')
                     return render_template('add_placement.html', form=form)
                 
-                # Parse and save links (same as above)
+                # Parse and save links
                 added_count = 0
                 for link in links:
                     placement_data = parse_media_links(link)
@@ -109,8 +97,7 @@ def add_placement():
                             title=placement_data.get('title', ''),
                             source=placement_data.get('source', ''),
                             publication_date=placement_data.get('date'),
-                            media_type=placement_data.get('type', 'article'),
-                            user_id=current_user.id
+                            media_type=placement_data.get('type', 'article')
                         )
                         db.session.add(placement)
                         added_count += 1
@@ -129,14 +116,20 @@ def add_placement():
         elif form.input_type.data == 'gsheet':
             sheet_id = form.google_sheet_id.data
             try:
-                content = get_google_sheets_content(current_user.id, sheet_id)
+                # Get the first Google credential (since we no longer have user-specific credentials)
+                google_cred = GoogleCredential.query.first()
+                if not google_cred:
+                    flash('Google API credentials are not set up. Please add them in Settings.', 'warning')
+                    return redirect(url_for('settings'))
+                    
+                content = get_google_sheets_content(None, sheet_id)
                 links = extract_links(content)
                 
                 if not links:
                     flash('No valid media links found in the Google Sheet.', 'warning')
                     return render_template('add_placement.html', form=form)
                 
-                # Parse and save links (same as above)
+                # Parse and save links
                 added_count = 0
                 for link in links:
                     placement_data = parse_media_links(link)
@@ -146,8 +139,7 @@ def add_placement():
                             title=placement_data.get('title', ''),
                             source=placement_data.get('source', ''),
                             publication_date=placement_data.get('date'),
-                            media_type=placement_data.get('type', 'article'),
-                            user_id=current_user.id
+                            media_type=placement_data.get('type', 'article')
                         )
                         db.session.add(placement)
                         added_count += 1
@@ -165,27 +157,24 @@ def add_placement():
     return render_template('add_placement.html', form=form)
 
 @app.route('/placement/<int:placement_id>')
-@login_required
 def view_placement(placement_id):
-    placement = MediaPlacement.query.filter_by(id=placement_id, user_id=current_user.id).first_or_404()
+    placement = MediaPlacement.query.filter_by(id=placement_id).first_or_404()
     return render_template('view_placement.html', placement=placement)
 
 @app.route('/placement/<int:placement_id>/delete', methods=['POST'])
-@login_required
 def delete_placement(placement_id):
-    placement = MediaPlacement.query.filter_by(id=placement_id, user_id=current_user.id).first_or_404()
+    placement = MediaPlacement.query.filter_by(id=placement_id).first_or_404()
     db.session.delete(placement)
     db.session.commit()
     flash('Media placement deleted successfully.', 'success')
     return redirect(url_for('dashboard'))
 
 @app.route('/settings', methods=['GET', 'POST'])
-@login_required
 def settings():
     google_form = GoogleCredentialForm()
     
-    # Check if user already has Google credentials
-    google_cred = GoogleCredential.query.filter_by(user_id=current_user.id).first()
+    # Check if we already have Google credentials
+    google_cred = GoogleCredential.query.first()
     
     if google_form.validate_on_submit():
         if google_cred:
@@ -193,7 +182,6 @@ def settings():
             flash('Google API Key updated successfully!', 'success')
         else:
             google_cred = GoogleCredential(
-                user_id=current_user.id,
                 api_key=google_form.api_key.data
             )
             db.session.add(google_cred)
