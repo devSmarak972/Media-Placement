@@ -235,14 +235,18 @@ def google_auth_callback():
     db.session.commit()
     
     # Check if there's a return_to session variable to handle redirects
-    # This is used when coming from the docket creation process
+    # This is used when coming from specific processes that need OAuth
     return_to = session.pop('return_to', None)
     if return_to == 'create_dockets':
         flash('Successfully authenticated with Google! Creating dockets...', 'success')
         return redirect(url_for('docket.create_all_dockets'))
+    elif return_to == 'export_sheet':
+        flash('Successfully authenticated with Google! Exporting to sheet...', 'success')
+        return redirect(url_for('docket.export_to_sheet'))
     
+    # Default: return to settings page with success message
     flash('Successfully authenticated with Google!', 'success')
-    return redirect(url_for('settings'))
+    return render_template('google_auth_success.html')
 
 def take_screenshot(url):
     """Take a screenshot of a webpage."""
@@ -581,8 +585,9 @@ Created: {placement.created_at.strftime('%Y-%m-%d %H:%M:%S')}
 """
                 
                 # Create a Google Doc
+                doc_title = f"Media Placement - {placement.title or placement.source or 'Untitled'}"
                 doc_url = create_google_doc(
-                    f"Media Placement - {placement.title or placement.source}",
+                    doc_title,
                     content,
                     screenshot
                 )
@@ -609,14 +614,16 @@ Created: {placement.created_at.strftime('%Y-%m-%d %H:%M:%S')}
         
         # Create a Google Sheet with all dockets
         if docket_data:
-            sheet_url = create_google_sheet("Media Placements Summary", docket_data)
+            sheet_title = "Media Placements Summary"
+            sheet_url = create_google_sheet(sheet_title, docket_data)
             
             flash(f'Successfully created {success_count} dockets and a summary spreadsheet!', 'success')
             
-            # Return with sheet URL for download
+            # Return with sheet URL for download and info about created dockets
             return render_template('docket_success.html', 
-                                   docket_count=success_count, 
-                                   sheet_url=sheet_url)
+                                   docket_title="Multiple Media Placement Dockets",
+                                   docket_url=sheet_url,
+                                   item_count=success_count)
         else:
             flash('No dockets were created due to errors. Please check the logs.', 'warning')
             return redirect(url_for('dashboard'))
@@ -635,12 +642,12 @@ def export_to_sheet():
             google_cred = get_google_credentials()
             if not google_cred.oauth_token:
                 # Store where to return after OAuth
-                session['return_to'] = 'create_dockets'
+                session['return_to'] = 'export_sheet'
                 flash('Please authenticate with Google before exporting to sheet.', 'warning')
                 return redirect(url_for('google.google_auth'))
         except ValueError:
             # Store where to return after OAuth
-            session['return_to'] = 'create_dockets'
+            session['return_to'] = 'export_sheet'
             flash('Please authenticate with Google before exporting to sheet.', 'warning')
             return redirect(url_for('google.google_auth'))
         
@@ -664,10 +671,14 @@ def export_to_sheet():
             ])
         
         # Create the sheet
-        sheet_url = create_google_sheet("Media Placements Export", sheet_data)
+        sheet_title = "Media Placements Export"
+        sheet_url = create_google_sheet(sheet_title, sheet_data)
         
         flash(f'Successfully exported {len(placements)} media placements to Google Sheets!', 'success')
-        return render_template('export_success.html', sheet_url=sheet_url)
+        return render_template('export_success.html', 
+                              sheet_url=sheet_url, 
+                              sheet_title=sheet_title,
+                              item_count=len(placements))
         
     except Exception as e:
         logger.error(f"Error exporting to sheet: {str(e)}")
