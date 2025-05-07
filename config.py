@@ -1,10 +1,10 @@
 import os
 from datetime import timedelta
-
+from dotenv import load_dotenv
+load_dotenv()
 class Config:
     # Flask configuration
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
-    
     # Database configuration - using SQLite by default for persistence and portability
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///media_placements.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False

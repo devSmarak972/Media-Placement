@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 def extract_links(text):
     """Extract all URLs from text content."""
     # More comprehensive URL regex pattern that properly handles file extensions like .cms
-    url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+(?:/(?:[-\w%!$&\'()*+,;=:~]|(?:%[\da-fA-F]{2}))*)*(?:\?(?:[-\w%!$&\'()*+,;=:~]|(?:%[\da-fA-F]{2}))*)?(?:#(?:[-\w%!$&\'()*+,;=:~]|(?:%[\da-fA-F]{2}))*)?'
-    
+    url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+(?:/(?:[-\w%.!$&\'()*+,;=:~]|(?:%[\da-fA-F]{2}))*)*(?:\?(?:[-\w%!$&\'()*+,;=:~]|(?:%[\da-fA-F]{2}))*)?(?:#(?:[-\w%!$&\'()*+,;=:~]|(?:%[\da-fA-F]{2}))*)?'    
     # Clean and deduplicate links
     unique_links = set()
     for match in re.finditer(url_pattern, text):
@@ -55,6 +54,7 @@ def parse_media_links(url):
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
+            print(url,"url")
             response = requests.get(url, headers=headers, timeout=5)
             response.raise_for_status()
             
@@ -65,15 +65,22 @@ def parse_media_links(url):
             meta_title = soup.find('meta', property='og:title') or soup.find('meta', attrs={'name': 'title'})
             if meta_title:
                 title = meta_title.get('content')
-            
+
             if not title:
                 title_tag = soup.find('title')
-                if title_tag:
-                    title = title_tag.string
-            
+                if title_tag and title_tag.string:
+                    title = title_tag.string.strip()
+
+            # Heuristic fallback: use first significant heading
+            if not title:
+                heading = soup.find(['h1', 'h2'])
+                if heading and heading.get_text(strip=True):
+                    title = heading.get_text(strip=True)
+
             if title:
-                result['title'] = title.strip()
-            
+                result['title'] = title
+
+            print(title,"title",url)
             # Try to get publication date
             date = None
             # Check various metadata tags for publication date

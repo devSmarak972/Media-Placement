@@ -98,16 +98,18 @@ def add_placement():
         # Handle Google Docs
         elif form.input_type.data == 'gdoc':
             doc_id = form.google_doc_id.data
+            print("Google Doc ID:", doc_id)
             try:
                 # Get the first Google credential (since we no longer have user-specific credentials)
                 google_cred = GoogleCredential.query.first()
+                print(google_cred)
                 if not google_cred:
                     flash('Google API credentials are not set up. Please add them in Settings.', 'warning')
                     return redirect(url_for('settings'))
                     
                 content = get_google_docs_content(doc_id)
                 links = extract_links(content)
-                
+                print("LInks from Google Doc:", links)
                 if not links:
                     flash('No valid media links found in the Google Doc.', 'warning')
                     return render_template('add_placement.html', form=form)
@@ -311,13 +313,13 @@ def create_docx_docket(placement_id):
     # Get the placement
     placement = MediaPlacement.query.filter_by(id=placement_id).first_or_404()
     
-    # Show loading screen first
-    if request.args.get('start') != 'true':
-        return render_template(
-            'loading.html',
-            action_title='Creating Docket',
-            message=f'Taking a screenshot and preparing docket for "{placement.title or "Untitled"}"'
-        )
+    # # Show loading screen first
+    # if request.args.get('start') != 'true':
+    #     return render_template(
+    #         'loading.html',
+    #         action_title='Creating Docket',
+    #         message=f'Taking a screenshot and preparing docket for "{placement.title or "Untitled"}"'
+    #     )
     
     try:
         
@@ -357,8 +359,7 @@ def create_docx_docket(placement_id):
         doc.add_heading("Screenshot", level=2)
         
         # Create a loading paragraph
-        doc.add_paragraph("Taking screenshot... This may take a few moments.")
-        
+        print("Now taking screenshot...")
         # Try to take a screenshot of the URL using Selenium
         try:
             # Create a temporary file for the screenshot
@@ -389,7 +390,7 @@ def create_docx_docket(placement_id):
         
         # Add summary section
         doc.add_heading("Summary", level=2)
-        
+        print("Now extracting summary...")
         # Try to extract a summary
         try:
             headers = {
@@ -507,12 +508,12 @@ def export_complete_package():
     """Export all media placements with their dockets as a complete ZIP package."""
     try:
         # Create a loading page first
-        if request.args.get('start') != 'true':
-            return render_template(
-                'loading.html',
-                action_title='Creating Complete Export Package',
-                message='Generating dockets and preparing ZIP file with all data...'
-            )
+        # if request.args.get('start') != 'true':
+        #     return render_template(
+        #         'loading.html',
+        #         action_title='Creating Complete Export Package',
+        #         message='Generating dockets and preparing ZIP file with all data...'
+        #     )
             
         # Get all placements
         placements = MediaPlacement.query.all()
