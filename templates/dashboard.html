@@ -52,6 +52,11 @@
                         <i data-feather="file" class="me-1"></i> Download as Excel
                     </a>
                 </li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('export_complete_package') }}" id="export-complete-link">
+                        <i data-feather="package" class="me-1"></i> Export Complete Package
+                    </a>
+                </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
                     <a class="dropdown-item" href="{{ url_for('google.google_auth') }}">
@@ -184,4 +189,21 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    // Handle the export complete package link to show loading screen
+    document.addEventListener('DOMContentLoaded', function() {
+        const exportCompleteLink = document.getElementById('export-complete-link');
+        if (exportCompleteLink) {
+            exportCompleteLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                // First load the loading page
+                window.location.href = "{{ url_for('export_complete_package') }}";
+                // After a short delay, redirect to the actual processing URL with start=true
+                setTimeout(function() {
+                    window.location.href = "{{ url_for('export_complete_package', start='true') }}";
+                }, 1500);
+            });
+        }
+    });
+</script>
 {% endblock %}

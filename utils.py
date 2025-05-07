@@ -70,13 +70,14 @@ def truncate_text(text, max_length=100):
     
     return text[:max_length].rsplit(' ', 1)[0] + '...'
 
-def take_screenshot(url, output_path=None):
+def take_screenshot(url, output_path=None, timeout=15):
     """
-    Take a screenshot of a webpage using Selenium WebDriver.
+    Take a screenshot of a webpage using Selenium WebDriver with optimized settings.
     
     Args:
         url (str): The URL of the webpage to screenshot
         output_path (str, optional): Path to save the screenshot. If None, returns the image bytes.
+        timeout (int): Maximum seconds to wait for page load.
         
     Returns:
         bytes or str: If output_path is None, returns the screenshot as bytes, otherwise returns the path.
@@ -88,44 +89,66 @@ def take_screenshot(url, output_path=None):
     from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.chrome.options import Options
     from webdriver_manager.chrome import ChromeDriverManager
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
     
-    # Set up Chrome options
+    # Set up Chrome options with optimized performance
     chrome_options = Options()
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--window-size=1280,1024')
-    
-    # Initialize the Chrome driver
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
-        options=chrome_options
-    )
+    chrome_options.add_argument('--disable-extensions')
+    chrome_options.add_argument('--disable-infobars')
+    chrome_options.add_argument('--disable-notifications')
+    chrome_options.add_argument('--disable-popup-blocking')
+    chrome_options.add_argument('--blink-settings=imagesEnabled=true')
+    chrome_options.add_argument('--disable-logging')
+    chrome_options.page_load_strategy = 'eager'  # Interactive instead of complete load
     
     try:
+        # Initialize the Chrome driver with a timeout
+        driver = webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()),
+            options=chrome_options
+        )
+        driver.set_page_load_timeout(timeout)
+        
         # Navigate to the URL
-        driver.get(url)
-        
-        # Wait for page to load (adjust as needed)
-        time.sleep(5)
-        
-        # Scroll down to capture more content
-        driver.execute_script("window.scrollTo(0, 250)")
-        time.sleep(1)
-        
-        # Take screenshot
-        if output_path:
-            driver.save_screenshot(output_path)
-            return output_path
-        else:
-            # Return as bytes
-            screenshot = driver.get_screenshot_as_png()
-            return screenshot
+        try:
+            driver.get(url)
+            
+            # Wait less time for the page to become somewhat interactive
+            time.sleep(2)
+            
+            # Scroll down to capture more content
+            driver.execute_script("window.scrollTo(0, 250)")
+            
+            # Take screenshot
+            if output_path:
+                driver.save_screenshot(output_path)
+                result = output_path
+            else:
+                # Return as bytes
+                result = driver.get_screenshot_as_png()
+                
+            driver.quit()
+            return result
+            
+        except Exception as e:
+            print(f"Timed out or error loading page: {str(e)}")
+            # Still try to take a screenshot of what loaded
+            if output_path:
+                driver.save_screenshot(output_path)
+                result = output_path
+            else:
+                result = driver.get_screenshot_as_png()
+                
+            driver.quit()
+            return result
             
     except Exception as e:
-        print(f"Error taking screenshot: {str(e)}")
+        print(f"Error setting up webdriver: {str(e)}")
         return None
-    finally:
-        # Close the browser
-        driver.quit()

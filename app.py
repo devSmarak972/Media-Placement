@@ -1,6 +1,8 @@
 import os
 import io
 import requests
+import zipfile
+import shutil
 from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
@@ -499,6 +501,230 @@ def export_single_excel(placement_id):
         app.logger.error(f"Error exporting to Excel: {str(e)}")
         flash(f'Error exporting to Excel: {str(e)}', 'danger')
         return redirect(url_for('view_placement', placement_id=placement_id))
+
+@app.route('/export/complete')
+def export_complete_package():
+    """Export all media placements with their dockets as a complete ZIP package."""
+    try:
+        # Create a loading page first
+        if request.args.get('start') != 'true':
+            return render_template(
+                'loading.html',
+                action_title='Creating Complete Export Package',
+                message='Generating dockets and preparing ZIP file with all data...'
+            )
+            
+        # Get all placements
+        placements = MediaPlacement.query.all()
+        
+        if not placements:
+            flash('No media placements found to export.', 'info')
+            return redirect(url_for('dashboard'))
+        
+        # Create temporary directory to store files
+        temp_dir = tempfile.mkdtemp()
+        dockets_dir = os.path.join(temp_dir, 'dockets')
+        os.makedirs(dockets_dir, exist_ok=True)
+        
+        # Prepare data for Excel with local hyperlinks to dockets
+        data = []
+        
+        # Process each placement and create docket if needed
+        for placement in placements:
+            # Create a unique filename for the docket
+            safe_title = ''.join(c for c in (placement.title or "untitled") if c.isalnum() or c in ' -_')[:30]
+            safe_title = safe_title.replace(' ', '_')
+            docket_filename = f'docket_{placement.id}_{safe_title}.docx'
+            docket_path = os.path.join(dockets_dir, docket_filename)
+            
+            # Create the docket file
+            create_docket_for_export(placement, docket_path)
+            
+            # Add data with hyperlink to local docket file
+            docket_rel_path = f'dockets/{docket_filename}'
+            data.append({
+                'ID': placement.id,
+                'Title': placement.title or "Untitled",
+                'URL': placement.url,
+                'Source': placement.source or "Unknown",
+                'Publication Date': str(placement.publication_date) if placement.publication_date else "Unknown",
+                'Media Type': placement.media_type,
+                'Google Docket': placement.docket_url or "No Google docket",
+                'Local Docket': f'=HYPERLINK("./dockets/{docket_filename}", "Open Docket")',
+                'Created': placement.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'Updated': placement.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'Notes': placement.notes or ""
+            })
+        
+        # Create Excel file
+        df = pd.DataFrame(data)
+        excel_path = os.path.join(temp_dir, 'media_placements.xlsx')
+        
+        with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Media Placements', index=False)
+            
+            # Auto-adjust columns' width
+            worksheet = writer.sheets['Media Placements']
+            for idx, col in enumerate(df.columns):
+                max_length = max(df[col].astype(str).map(len).max(), len(col)) + 2
+                worksheet.column_dimensions[chr(65 + idx)].width = max_length
+        
+        # Create README file
+        readme_path = os.path.join(temp_dir, 'README.txt')
+        with open(readme_path, 'w') as f:
+            f.write("Media Placements Export Package\n")
+            f.write("==============================\n\n")
+            f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            f.write("Contents:\n")
+            f.write("- media_placements.xlsx: Excel file with all media placements and links to dockets\n")
+            f.write("- dockets/: Directory containing Word document dockets for each media placement\n\n")
+            f.write("Instructions:\n")
+            f.write("1. Keep the Excel file and dockets folder in the same directory\n")
+            f.write("2. Open the Excel file to view all placements\n")
+            f.write("3. Click on 'Open Docket' links to open the corresponding docket files\n")
+        
+        # Create ZIP file in memory
+        memory_file = io.BytesIO()
+        
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Add Excel file
+            zipf.write(excel_path, arcname='media_placements.xlsx')
+            
+            # Add README
+            zipf.write(readme_path, arcname='README.txt')
+            
+            # Add all docket files
+            for root, dirs, files in os.walk(dockets_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.join('dockets', file)
+                    zipf.write(file_path, arcname=arcname)
+        
+        # Clean up temporary directory
+        shutil.rmtree(temp_dir)
+        
+        # Prepare ZIP for download
+        memory_file.seek(0)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        return send_file(
+            memory_file,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=f'media_placements_complete_{timestamp}.zip'
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error creating complete export package: {str(e)}")
+        flash(f'Error creating export package: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
+
+def create_docket_for_export(placement, output_path):
+    """Create a Word docket for a specific placement and save to the given path."""
+    try:
+        # Create a new Word document
+        doc = Document()
+        
+        # Add title with formatting
+        doc.add_heading(placement.title or "Untitled Article", level=1)
+        
+        # Add basic info section
+        doc.add_heading("Basic Information", level=2)
+        table = doc.add_table(rows=5, cols=2)
+        table.style = 'Table Grid'
+        
+        # Add basic info rows
+        cells = table.rows[0].cells
+        cells[0].text = "URL"
+        cells[1].text = placement.url
+        
+        cells = table.rows[1].cells
+        cells[0].text = "Source"
+        cells[1].text = placement.source or "Unknown"
+        
+        cells = table.rows[2].cells
+        cells[0].text = "Publication Date"
+        cells[1].text = str(placement.publication_date) if placement.publication_date else "Unknown"
+        
+        cells = table.rows[3].cells
+        cells[0].text = "Media Type"
+        cells[1].text = placement.media_type.title()
+        
+        cells = table.rows[4].cells
+        cells[0].text = "Created"
+        cells[1].text = placement.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Add screenshot section
+        doc.add_heading("Screenshot", level=2)
+        doc.add_paragraph("Screenshot attempted during export. If missing, visit the URL directly.")
+        
+        # Try to take a screenshot (with faster timeout)
+        try:
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                temp_screenshot_path = temp_file.name
+            
+            # Take the screenshot with reduced timeout
+            screenshot_path = take_screenshot(placement.url, temp_screenshot_path, timeout=10)
+            
+            if screenshot_path:
+                # Add the screenshot to the document
+                doc.add_picture(screenshot_path, width=Inches(6.0))
+                doc.add_paragraph(f"Screenshot taken on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                
+                # Clean up temp file
+                try:
+                    os.unlink(temp_screenshot_path)
+                except:
+                    pass
+        except Exception as e:
+            app.logger.error(f"Error taking screenshot for export: {str(e)}")
+            doc.add_paragraph(f"Error capturing screenshot - please visit the URL directly.")
+        
+        # Add summary section
+        doc.add_heading("Summary", level=2)
+        
+        # Try to extract a summary with shorter timeout
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(placement.url, headers=headers, timeout=5)
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Try to get the main article content
+            article = soup.find('article') or soup.find(class_=['article', 'post', 'content', 'main-content'])
+            
+            if article:
+                paragraphs = article.find_all('p')
+                content = ' '.join([p.get_text().strip() for p in paragraphs[:3]])  # Get first 3 paragraphs
+            else:
+                # Fallback to all paragraphs with limit
+                paragraphs = soup.find_all('p')[:5]
+                content = ' '.join([p.get_text().strip() for p in paragraphs])
+            
+            # Limit summary length
+            if content:
+                content = content[:800] + '...' if len(content) > 800 else content
+                doc.add_paragraph(content)
+            else:
+                doc.add_paragraph("No text content could be extracted from this page.")
+                
+        except Exception as e:
+            app.logger.error(f"Error extracting summary for export: {str(e)}")
+            doc.add_paragraph("Could not extract summary - please visit the URL directly.")
+        
+        # Add notes section
+        doc.add_heading("Notes", level=2)
+        doc.add_paragraph(placement.notes or "No notes available")
+        
+        # Save the document to the specified path
+        doc.save(output_path)
+        return True
+        
+    except Exception as e:
+        app.logger.error(f"Error creating docket for export: {str(e)}")
+        return False
 
 @app.errorhandler(500)
 def internal_error(error):
