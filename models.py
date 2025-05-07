@@ -13,6 +13,7 @@ class MediaPlacement(db.Model):
     publication_date = db.Column(db.Date, nullable=True)
     media_type = db.Column(db.String(64), default='article')  # article, video, podcast, etc.
     notes = db.Column(db.Text, nullable=True)
+    user_id = db.Column(db.Integer, nullable=True)  # Allow NULL for user_id now that we don't use authentication
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
