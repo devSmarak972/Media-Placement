@@ -114,6 +114,23 @@
                                         <a class="dropdown-item" href="{{ url_for('create_docx_docket', placement_id=placement.id) }}">
                                             <i data-feather="download" class="me-1"></i> Download Word Document
                                         </a>
+                                        <script>
+                                            // Update Word Document link to first show the loading screen
+                                            document.addEventListener('DOMContentLoaded', function() {
+                                                const wordDocLink = document.querySelector('a[href="{{ url_for('create_docx_docket', placement_id=placement.id) }}"]');
+                                                if (wordDocLink) {
+                                                    wordDocLink.addEventListener('click', function(e) {
+                                                        e.preventDefault();
+                                                        // First load the loading page
+                                                        window.location.href = "{{ url_for('create_docx_docket', placement_id=placement.id) }}";
+                                                        // After a short delay, redirect to the actual processing URL with start=true
+                                                        setTimeout(function() {
+                                                            window.location.href = "{{ url_for('create_docx_docket', placement_id=placement.id, start='true') }}";
+                                                        }, 1000);
+                                                    });
+                                                }
+                                            });
+                                        </script>
                                     </li>
                                 </ul>
                             </div>

@@ -63,7 +63,69 @@ def format_date_for_display(date_obj):
 
 def truncate_text(text, max_length=100):
     """Truncate text to a specified length and add ellipsis if needed."""
+    if not text:
+        return ""
     if len(text) <= max_length:
         return text
     
     return text[:max_length].rsplit(' ', 1)[0] + '...'
+
+def take_screenshot(url, output_path=None):
+    """
+    Take a screenshot of a webpage using Selenium WebDriver.
+    
+    Args:
+        url (str): The URL of the webpage to screenshot
+        output_path (str, optional): Path to save the screenshot. If None, returns the image bytes.
+        
+    Returns:
+        bytes or str: If output_path is None, returns the screenshot as bytes, otherwise returns the path.
+    """
+    import io
+    import os
+    import time
+    from selenium import webdriver
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
+    from webdriver_manager.chrome import ChromeDriverManager
+    
+    # Set up Chrome options
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--window-size=1280,1024')
+    
+    # Initialize the Chrome driver
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=chrome_options
+    )
+    
+    try:
+        # Navigate to the URL
+        driver.get(url)
+        
+        # Wait for page to load (adjust as needed)
+        time.sleep(5)
+        
+        # Scroll down to capture more content
+        driver.execute_script("window.scrollTo(0, 250)")
+        time.sleep(1)
+        
+        # Take screenshot
+        if output_path:
+            driver.save_screenshot(output_path)
+            return output_path
+        else:
+            # Return as bytes
+            screenshot = driver.get_screenshot_as_png()
+            return screenshot
+            
+    except Exception as e:
+        print(f"Error taking screenshot: {str(e)}")
+        return None
+    finally:
+        # Close the browser
+        driver.quit()

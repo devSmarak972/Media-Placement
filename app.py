@@ -12,11 +12,12 @@ from docx import Document
 from docx.shared import Inches
 from PIL import Image
 from bs4 import BeautifulSoup
+import tempfile
 
 from config import Config
 from models import db, MediaPlacement, GoogleCredential
 from forms import AddPlacementForm, GoogleCredentialForm
-from utils import setup_logging
+from utils import setup_logging, take_screenshot
 from google_integration import google_bp, docket_bp, get_google_docs_content, get_google_sheets_content
 from parsers import extract_links, parse_media_links
 
@@ -305,9 +306,18 @@ def export_excel():
 @app.route('/create-docx-docket/<int:placement_id>')
 def create_docx_docket(placement_id):
     """Create a Word document docket for a specific media placement."""
+    # Get the placement
+    placement = MediaPlacement.query.filter_by(id=placement_id).first_or_404()
+    
+    # Show loading screen first
+    if request.args.get('start') != 'true':
+        return render_template(
+            'loading.html',
+            action_title='Creating Docket',
+            message=f'Taking a screenshot and preparing docket for "{placement.title or "Untitled"}"'
+        )
+    
     try:
-        # Get the placement
-        placement = MediaPlacement.query.filter_by(id=placement_id).first_or_404()
         
         # Create a new Word document
         doc = Document()
@@ -344,16 +354,33 @@ def create_docx_docket(placement_id):
         # Add screenshot section
         doc.add_heading("Screenshot", level=2)
         
-        # Try to take a screenshot of the URL
+        # Create a loading paragraph
+        doc.add_paragraph("Taking screenshot... This may take a few moments.")
+        
+        # Try to take a screenshot of the URL using Selenium
         try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            response = requests.get(placement.url, headers=headers, timeout=10)
-            response.raise_for_status()
+            # Create a temporary file for the screenshot
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                temp_screenshot_path = temp_file.name
             
-            # Use selenium-based screenshot logic if implemented or add a placeholder
-            doc.add_paragraph("Screenshot could not be included automatically. Please manually take a screenshot.")
+            # Show status in logs
+            app.logger.info(f"Taking screenshot of {placement.url}")
+            
+            # Take the screenshot using our utility function
+            screenshot_path = take_screenshot(placement.url, temp_screenshot_path)
+            
+            if screenshot_path:
+                # Add the screenshot to the document
+                doc.add_picture(screenshot_path, width=Inches(6.0))
+                doc.add_paragraph(f"Screenshot taken on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                
+                # Clean up the temporary file
+                try:
+                    os.unlink(temp_screenshot_path)
+                except:
+                    pass
+            else:
+                doc.add_paragraph("Screenshot could not be captured. The website may be protected or requires authentication.")
         except Exception as e:
             app.logger.error(f"Error taking screenshot for {placement.url}: {str(e)}")
             doc.add_paragraph(f"Error capturing screenshot: {str(e)}")
