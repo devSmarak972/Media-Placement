@@ -47,6 +47,11 @@
                         <i data-feather="grid" class="me-1"></i> Export to Google Sheet
                     </a>
                 </li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('export_excel') }}">
+                        <i data-feather="file" class="me-1"></i> Download as Excel
+                    </a>
+                </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
                     <a class="dropdown-item" href="{{ url_for('google.google_auth') }}">

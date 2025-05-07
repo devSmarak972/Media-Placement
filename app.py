@@ -1,10 +1,12 @@
 import os
+import io
 from datetime import datetime
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 import logging
+import pandas as pd
 
 from config import Config
 from models import db, MediaPlacement, GoogleCredential
@@ -236,6 +238,117 @@ def settings():
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('error.html', error='Page not found'), 404
+
+@app.route('/export/excel')
+def export_excel():
+    """Export all media placements to an Excel file directly."""
+    try:
+        # Get all placements
+        placements = MediaPlacement.query.all()
+        
+        if not placements:
+            flash('No media placements found to export.', 'info')
+            return redirect(url_for('dashboard'))
+        
+        # Prepare data for Excel
+        data = []
+        for placement in placements:
+            data.append({
+                'Title': placement.title or "Untitled",
+                'URL': placement.url,
+                'Source': placement.source or "Unknown",
+                'Publication Date': str(placement.publication_date) if placement.publication_date else "Unknown",
+                'Media Type': placement.media_type,
+                'Docket Link': placement.docket_url or "No docket",
+                'Created': placement.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'Updated': placement.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'Notes': placement.notes or ""
+            })
+        
+        # Create a Pandas DataFrame
+        df = pd.DataFrame(data)
+        
+        # Create an Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Media Placements', index=False)
+            
+            # Auto-adjust columns' width
+            worksheet = writer.sheets['Media Placements']
+            for idx, col in enumerate(df.columns):
+                max_length = max(df[col].astype(str).map(len).max(), len(col)) + 2
+                worksheet.column_dimensions[chr(65 + idx)].width = max_length
+        
+        output.seek(0)
+        
+        # Create timestamp for filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # Return the Excel file as a download
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'media_placements_{timestamp}.xlsx'
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error exporting to Excel: {str(e)}")
+        flash(f'Error exporting to Excel: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
+
+@app.route('/export/excel/<int:placement_id>')
+def export_single_excel(placement_id):
+    """Export a single media placement to an Excel file directly."""
+    try:
+        # Get the specific placement
+        placement = MediaPlacement.query.filter_by(id=placement_id).first_or_404()
+        
+        # Prepare data for Excel
+        data = [{
+            'Title': placement.title or "Untitled",
+            'URL': placement.url,
+            'Source': placement.source or "Unknown",
+            'Publication Date': str(placement.publication_date) if placement.publication_date else "Unknown",
+            'Media Type': placement.media_type,
+            'Docket Link': placement.docket_url or "No docket",
+            'Created': placement.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'Updated': placement.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'Notes': placement.notes or ""
+        }]
+        
+        # Create a Pandas DataFrame
+        df = pd.DataFrame(data)
+        
+        # Create an Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Media Placement', index=False)
+            
+            # Auto-adjust columns' width
+            worksheet = writer.sheets['Media Placement']
+            for idx, col in enumerate(df.columns):
+                max_length = max(df[col].astype(str).map(len).max(), len(col)) + 2
+                worksheet.column_dimensions[chr(65 + idx)].width = max_length
+        
+        output.seek(0)
+        
+        # Create a sanitized title for filename
+        safe_title = ''.join(c for c in (placement.title or "untitled") if c.isalnum() or c in ' -_')[:30]
+        safe_title = safe_title.replace(' ', '_')
+        
+        # Return the Excel file as a download
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'media_placement_{safe_title}_{placement.id}.xlsx'
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error exporting to Excel: {str(e)}")
+        flash(f'Error exporting to Excel: {str(e)}', 'danger')
+        return redirect(url_for('view_placement', placement_id=placement_id))
 
 @app.errorhandler(500)
 def internal_error(error):
