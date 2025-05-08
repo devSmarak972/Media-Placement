@@ -282,19 +282,19 @@ def take_screenshot(url,output_path=None, timeout=15):
 				args=[
 			"--disable-gpu",
 			"--no-sandbox",
-			"--disable-dev-shm-usage",
-			"--disable-setuid-sandbox",
-			"--disable-background-networking",
-			"--disable-extensions",
-			"--disable-sync",
-			"--metrics-recording-only",
-			"--disable-default-apps",
-			"--no-first-run",
-			"--no-zygote",
-			"--single-process",
-			"--font-render-hinting=none",
-			"--disable-webgl",
-			"--disable-software-rasterizer"
+			# "--disable-dev-shm-usage",
+			# "--disable-setuid-sandbox",
+			# "--disable-background-networking",
+			# "--disable-extensions",
+			# "--disable-sync",
+			# "--metrics-recording-only",
+			# "--disable-default-apps",
+			# "--no-first-run",
+			# "--no-zygote",
+			# "--single-process",
+			# "--font-render-hinting=none",
+			# "--disable-webgl",
+			# "--disable-software-rasterizer"
 				]
 			)
 			page = browser.new_page()
