@@ -111,7 +111,7 @@ def take_screenshot(url, output_path=None, timeout=15):
     try:
         # Initialize the Chrome driver with a timeout
         driver = webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()),
+            # service=Service(ChromeDriverManager().install()),
             options=chrome_options
         )
         driver.set_page_load_timeout(timeout)
