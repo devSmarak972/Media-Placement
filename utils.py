@@ -86,36 +86,31 @@ def take_screenshot(url, output_path=None, timeout=15):
     import os
     import time
     from selenium import webdriver
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.chrome.options import Options
-    from webdriver_manager.chrome import ChromeDriverManager
+    from selenium.webdriver.firefox.service import Service as FirefoxService
+    from selenium.webdriver.firefox.options import Options as FirefoxOptions
+    from webdriver_manager.firefox import GeckoDriverManager
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
-    
-    # Set up Chrome options with optimized performance
-    chrome_options = Options()
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('--window-size=1280,1024')
-    chrome_options.add_argument('--disable-extensions')
-    chrome_options.add_argument('--disable-infobars')
-    chrome_options.add_argument('--disable-notifications')
-    chrome_options.add_argument('--disable-popup-blocking')
-    chrome_options.add_argument('--blink-settings=imagesEnabled=true')
-    chrome_options.add_argument('--disable-logging')
-    chrome_options.page_load_strategy = 'eager'  # Interactive instead of complete load
-    
+
+    # Set up Firefox options for headless, optimized performance
+    firefox_options = FirefoxOptions()
+    firefox_options.headless = True  # Same as firefox_options.add_argument('--headless')
+
+    # Firefox has fewer arguments; unnecessary ones are omitted
+    # Some equivalent features are handled differently or aren't needed in Firefox
+    # 'window-size' can be controlled via the set_window_size method if needed
+
     try:
-        # Initialize the Chrome driver with a timeout
-        driver = webdriver.Chrome(
-            # service=Service(ChromeDriverManager().install()),
-            options=chrome_options
+        # Initialize the Firefox driver
+        driver = webdriver.Firefox(
+            service=FirefoxService(GeckoDriverManager().install()),
+            options=firefox_options
         )
+
+        timeout = 2  # Ensure timeout is defined
         driver.set_page_load_timeout(timeout)
-        
+            
         # Navigate to the URL
         try:
             driver.get(url)
