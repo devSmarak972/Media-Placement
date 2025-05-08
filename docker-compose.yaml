@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    shm_size: 2g
+    mem_limit: 1024m
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app

@@ -1,8 +1,0 @@
-[phases.setup]
-aptPkgs = ["firefox"]
-
-[phases.install]
-cmds = ["pip install -r requirements.txt"]
-
-[phases.start]
-cmd = "python run.py"
