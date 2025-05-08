@@ -58,6 +58,7 @@ def dashboard():
 @app.route('/add_placement', methods=['GET', 'POST'])
 def add_placement():
     form = AddPlacementForm()
+    app.logger.info("Adding new placement",form.input_type.data)
     if form.validate_on_submit():
         # Handle direct text input
         if form.input_type.data == 'direct':
@@ -98,7 +99,7 @@ def add_placement():
         # Handle Google Docs
         elif form.input_type.data == 'gdoc':
             doc_id = form.google_doc_id.data
-            print("Google Doc ID:", doc_id)
+            app.logger.info("Google Doc ID:", doc_id)
             try:
                 # Get the first Google credential (since we no longer have user-specific credentials)
                 google_cred = GoogleCredential.query.first()

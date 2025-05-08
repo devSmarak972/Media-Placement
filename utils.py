@@ -71,7 +71,97 @@ def truncate_text(text, max_length=100):
     
     return text[:max_length].rsplit(' ', 1)[0] + '...'
 
-def take_screenshot(url, output_path=None, timeout=15):
+# def take_screenshot(url, output_path=None, timeout=15):
+#     """
+#     Take a screenshot of a webpage using Selenium WebDriver with optimized settings.
+    
+#     Args:
+#         url (str): The URL of the webpage to screenshot
+#         output_path (str, optional): Path to save the screenshot. If None, returns the image bytes.
+#         timeout (int): Maximum seconds to wait for page load.
+        
+#     Returns:
+#         bytes or str: If output_path is None, returns the screenshot as bytes, otherwise returns the path.
+#     """
+#     import io
+#     import os
+#     import time
+#     from selenium import webdriver
+#     from selenium.webdriver.chrome.service import Service
+#     from selenium.webdriver.chrome.options import Options
+#     from webdriver_manager.chrome import ChromeDriverManager
+#     from selenium.webdriver.common.by import By
+#     from selenium.webdriver.support.ui import WebDriverWait
+#     from selenium.webdriver.support import expected_conditions as EC
+    
+#     # Set up Chrome options with optimized performance
+#     # chrome_options = Options()
+#     options  = webdriver.ChromeOptions()
+#     assert options.capabilities['browserName'] == 'chrome'
+#     options.add_argument('--no-sandbox')
+#     options.add_argument('--headless')
+#     options.add_argument('--disable-dev-shm-usage')
+#     options.add_argument('--disable-gpu')
+#     options.add_argument('--window-size=1280,1024')
+#     options.add_argument('--disable-extensions')
+#     options.add_argument('--disable-infobars')
+#     options.add_argument('--disable-notifications')
+#     options.add_argument('--disable-popup-blocking')
+#     options.add_argument('--blink-settings=imagesEnabled=true')
+#     # chrome_options.add_argument('--disable-logging')
+#     options.page_load_strategy = 'eager'  # Interactive instead of complete load
+
+#     try:
+#         # Initialize the Chrome driver with a timeout
+#         # driver = webdriver.Chrome(
+#         #     service=Service(),
+#         #     options=chrome_options
+#         # )
+#         driver = webdriver.Chrome(options=options)
+
+#         driver.set_page_load_timeout(timeout)
+        
+#         # Navigate to the URL
+#         try:
+#             driver.get(url)
+            
+#             # Wait less time for the page to become somewhat interactive
+#             time.sleep(2)
+            
+#             # Scroll down to capture more content
+#             driver.execute_script("window.scrollTo(0, 250)")
+            
+#             # Take screenshot
+#             if output_path:
+#                 driver.save_screenshot(output_path)
+#                 result = output_path
+#             else:
+#                 # Return as bytes
+#                 result = driver.get_screenshot_as_png()
+                
+#             driver.quit()
+#             return result
+            
+#         except Exception as e:
+#             print(f"Timed out or error loading page: {str(e)}")
+#             # Still try to take a screenshot of what loaded
+#             if output_path:
+#                 driver.save_screenshot(output_path)
+#                 result = output_path
+#             else:
+#                 result = driver.get_screenshot_as_png()
+                
+#             driver.quit()
+#             return result
+            
+#     except Exception as e:
+#         print(f"Error setting up webdriver: {str(e)}")
+#         return None
+
+
+
+
+def take_screenshot(url, output_path="screenshot.png", timeout=15):
     """
     Take a screenshot of a webpage using Selenium WebDriver with optimized settings.
     
@@ -86,74 +176,50 @@ def take_screenshot(url, output_path=None, timeout=15):
     import io
     import os
     import time
-    from selenium import webdriver
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.chrome.options import Options
-    from webdriver_manager.chrome import ChromeDriverManager
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    
-    # Set up Chrome options with optimized performance
-    # chrome_options = Options()
-    options  = webdriver.ChromeOptions()
-    assert options.capabilities['browserName'] == 'chrome'
-    options.add_argument('--no-sandbox')
-    options.add_argument('--headless')
-    options.add_argument('--disable-dev-shm-usage')
-    # chrome_options.add_argument('--disable-gpu')
-    # chrome_options.add_argument('--window-size=1280,1024')
-    # chrome_options.add_argument('--disable-extensions')
-    # chrome_options.add_argument('--disable-infobars')
-    # chrome_options.add_argument('--disable-notifications')
-    # chrome_options.add_argument('--disable-popup-blocking')
-    # chrome_options.add_argument('--blink-settings=imagesEnabled=true')
-    # chrome_options.add_argument('--disable-logging')
-    options.page_load_strategy = 'eager'  # Interactive instead of complete load
+    from playwright.sync_api import sync_playwright
+
 
     try:
-        # Initialize the Chrome driver with a timeout
-        # driver = webdriver.Chrome(
-        #     service=Service(),
-        #     options=chrome_options
-        # )
-        driver = webdriver.Chrome(options=options)
+        with sync_playwright() as p:
+            # Launch the browser in headless mode
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+            "--disable-gpu",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-setuid-sandbox",
+            "--disable-background-networking",
+            "--disable-extensions",
+            "--disable-sync",
+            "--metrics-recording-only",
+            "--disable-default-apps",
+            "--no-first-run",
+            "--no-zygote",
+            "--single-process",
+            "--font-render-hinting=none",
+            "--disable-webgl",
+            "--disable-software-rasterizer"
+                ]
+            )
+            page = browser.new_page()
 
-        driver.set_page_load_timeout(timeout)
-        
-        # Navigate to the URL
-        try:
-            driver.get(url)
-            
-            # Wait less time for the page to become somewhat interactive
-            time.sleep(2)
-            
-            # Scroll down to capture more content
-            driver.execute_script("window.scrollTo(0, 250)")
-            
-            # Take screenshot
+            # Navigate to the URL
+            page.goto(url, wait_until='domcontentloaded', timeout=timeout * 1000)
+
+            # Take a screenshot
             if output_path:
-                driver.save_screenshot(output_path)
+                page.screenshot(path=output_path, full_page=True)
                 result = output_path
             else:
-                # Return as bytes
-                result = driver.get_screenshot_as_png()
-                
-            driver.quit()
+                raise ValueError("Output path must be specified to save the screenshot.")
+
+                # screenshot_bytes = page.screenshot(full_page=True)
+                # result = io.BytesIO(screenshot_bytes)
+
+            # Close the browser
+            browser.close()
             return result
-            
-        except Exception as e:
-            print(f"Timed out or error loading page: {str(e)}")
-            # Still try to take a screenshot of what loaded
-            if output_path:
-                driver.save_screenshot(output_path)
-                result = output_path
-            else:
-                result = driver.get_screenshot_as_png()
-                
-            driver.quit()
-            return result
-            
     except Exception as e:
-        print(f"Error setting up webdriver: {str(e)}")
+        print(f"Error taking screenshot: {str(e)}")
         return None
