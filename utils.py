@@ -209,7 +209,7 @@ def take_screenshot(url, output_path="screenshot.png", timeout=15):
 
             # Take a screenshot
             if output_path:
-                page.screenshot(path=output_path, full_page=True)
+                page.screenshot(path=output_path, full_page=False)
                 result = output_path
             else:
                 raise ValueError("Output path must be specified to save the screenshot.")
