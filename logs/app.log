@@ -43,3 +43,8 @@
 2025-05-09 12:37:01,156 INFO: Taking screenshot of https://timesofindia.indiatimes.com/india/before-after-satellite-images-reveal-damage-to-terror-camps-in-pakistan-after-operation-sindoor/articleshow/120980467.cms [in /app/app.py:371]
 2025-05-09 12:37:16,653 INFO: Taking screenshot of https://timesofindia.indiatimes.com/india/before-after-satellite-images-reveal-damage-to-terror-camps-in-pakistan-after-operation-sindoor/articleshow/120980467.cms [in /app/app.py:371]
 2025-05-09 12:37:17,630 INFO: Taking screenshot of https://timesofindia.indiatimes.com/india/before-after-satellite-images-reveal-damage-to-terror-camps-in-pakistan-after-operation-sindoor/articleshow/120980467.cms [in /app/app.py:371]
+2025-05-09 12:45:40,568 INFO: Media Placements App startup [in /app/utils.py:22]
+2025-05-09 12:50:00,923 INFO: Media Placements App startup [in /app/utils.py:22]
+2025-05-09 12:50:01,798 INFO: Media Placements App startup [in /app/utils.py:22]
+2025-05-09 12:50:14,474 INFO: Taking screenshot of https://timesofindia.indiatimes.com/india/before-after-satellite-images-reveal-damage-to-terror-camps-in-pakistan-after-operation-sindoor/articleshow/120980467.cms [in /app/app.py:371]
+2025-05-09 12:50:15,466 INFO: Taking screenshot of https://timesofindia.indiatimes.com/india/before-after-satellite-images-reveal-damage-to-terror-camps-in-pakistan-after-operation-sindoor/articleshow/120980467.cms [in /app/app.py:371]

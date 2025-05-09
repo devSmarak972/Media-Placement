@@ -254,36 +254,28 @@ def google_auth_callback():
     # Default: return to settings page with success message
     flash('Successfully authenticated with Google!', 'success')
     return render_template('google_auth_success.html')
-
 def take_screenshot(url, output_path=None, timeout=15):
     """
-    Take a screenshot of a webpage using Selenium WebDriver with optimized settings.
-    
+    Take a screenshot of a webpage using Selenium WebDriver with Chromium (Docker-optimized).
+
     Args:
-        url (str): The URL of the webpage to screenshot
+        url (str): The URL of the webpage to screenshot.
         output_path (str, optional): Path to save the screenshot. If None, returns the image bytes.
         timeout (int): Maximum seconds to wait for page load.
-        
+
     Returns:
-        bytes or str: If output_path is None, returns the screenshot as bytes, otherwise returns the path.
+        bytes or str: Screenshot bytes if output_path is None, otherwise the output path.
     """
-    import io
-    import os
     import time
     from selenium import webdriver
-    from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.chrome.options import Options
-    from webdriver_manager.chrome import ChromeDriverManager
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    
-    # Set up Chrome options with optimized performance
-    # chrome_options = Options()
-    options  = webdriver.ChromeOptions()
-    assert options.capabilities['browserName'] == 'chrome'
-    options.add_argument('--no-sandbox')
+    from selenium.webdriver.chrome.service import Service
+
+    # Set up options for Chromium
+    options = Options()
+    options.binary_location = "/usr/bin/chromium"
     options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
     options.add_argument('--window-size=1280,1024')
@@ -292,89 +284,40 @@ def take_screenshot(url, output_path=None, timeout=15):
     options.add_argument('--disable-notifications')
     options.add_argument('--disable-popup-blocking')
     options.add_argument('--blink-settings=imagesEnabled=true')
-    # chrome_options.add_argument('--disable-logging')
-    options.page_load_strategy = 'eager'  # Interactive instead of complete load
+    options.page_load_strategy = 'eager'
 
     try:
-        # Initialize the Chrome driver with a timeout
-        # driver = webdriver.Chrome(
-        #     service=Service(),
-        #     options=chrome_options
-        # )
-        driver = webdriver.Chrome(options=options)
-
+        # Create the driver using system-installed chromedriver
+        driver = webdriver.Chrome(service=Service("/usr/bin/chromedriver"), options=options)
         driver.set_page_load_timeout(timeout)
-        
-        # Navigate to the URL
+
         try:
             driver.get(url)
-            
-            # Wait less time for the page to become somewhat interactive
             time.sleep(2)
-            
-            # Scroll down to capture more content
             driver.execute_script("window.scrollTo(0, 250)")
-            
-            # Take screenshot
+
             if output_path:
                 driver.save_screenshot(output_path)
                 result = output_path
             else:
-                # Return as bytes
                 result = driver.get_screenshot_as_png()
-                
-            driver.quit()
-            return result
-            
+
         except Exception as e:
             print(f"Timed out or error loading page: {str(e)}")
-            # Still try to take a screenshot of what loaded
+            # Attempt screenshot of partial content
             if output_path:
                 driver.save_screenshot(output_path)
                 result = output_path
             else:
                 result = driver.get_screenshot_as_png()
-                
+        finally:
             driver.quit()
-            return result
-            
+
+        return result
+
     except Exception as e:
-        print(f"Error setting up webdriver: {str(e)}")
+        print(f"Error setting up WebDriver: {str(e)}")
         return None
-
-
-def extract_summary(url):
-    """Extract a summary from the webpage."""
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Try to get the main article content
-        article = soup.find('article') or soup.find(class_=['article', 'post', 'content', 'main-content'])
-        
-        if article:
-            paragraphs = article.find_all('p')
-            content = ' '.join([p.get_text().strip() for p in paragraphs[:5]])  # Get first 5 paragraphs
-        else:
-            # Fallback to all paragraphs
-            paragraphs = soup.find_all('p')
-            content = ' '.join([p.get_text().strip() for p in paragraphs[:5]])
-        
-        # Limit summary length
-        if content:
-            content = content[:1000] + '...' if len(content) > 1000 else content
-        else:
-            content = "No text content could be extracted from this page."
-        
-        return content
-    except Exception as e:
-        logger.error(f"Error extracting summary for {url}: {str(e)}")
-        return f"Error extracting summary: {str(e)}"
 
 def create_google_doc(title, content, screenshot=None):
     """Create a Google Doc with the given content and screenshot."""
