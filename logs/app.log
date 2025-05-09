@@ -22,3 +22,8 @@
 2025-05-08 18:14:12,101 INFO: Media Placements App startup [in /app/utils.py:22]
 2025-05-08 18:14:17,402 INFO: Taking screenshot of https://www.thehindu.com/news/international/blast-heard-in-pakistans-lahore-says-media-report/article69551939.ece [in /app/app.py:371]
 2025-05-08 18:14:18,389 INFO: Taking screenshot of https://www.thehindu.com/news/international/blast-heard-in-pakistans-lahore-says-media-report/article69551939.ece [in /app/app.py:371]
+2025-05-09 12:03:05,568 INFO: Media Placements App startup [in /app/utils.py:22]
+2025-05-09 12:03:06,456 INFO: Media Placements App startup [in /app/utils.py:22]
+2025-05-09 12:13:54,992 INFO: Taking screenshot of https://timesofindia.indiatimes.com/india/operation-sindoor-live-updates-jammu-and-kashmir-pahalgam-terror-attack-indian-army-military-strikes-pok-pakistan/liveblog/120950644.cms [in /app/app.py:371]
+2025-05-09 12:13:55,993 INFO: Taking screenshot of https://timesofindia.indiatimes.com/india/operation-sindoor-live-updates-jammu-and-kashmir-pahalgam-terror-attack-indian-army-military-strikes-pok-pakistan/liveblog/120950644.cms [in /app/app.py:371]
+2025-05-09 12:15:26,611 INFO: Media Placements App startup [in /app/utils.py:22]
